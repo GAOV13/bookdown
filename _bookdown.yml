@@ -1,0 +1,4 @@
+book_filename: "index"  # Nombre del archivo principal
+output_dir: "_book"     # Carpeta de salida del libro
+delete_merged_files: true
+github_repo: "GAOV13/bookdown"  # Nombre del repositorio en GitHub
