@@ -1,0 +1,14 @@
+---
+title: "Bookdown"
+author: "Guido Salazar"
+date: "`r Sys.Date()`"
+output: bookdown::gitbook
+site: bookdown::bookdown_site
+#bibliography: [book.bib, packages.bib]
+biblio-style: apalike
+#link-citations: yes
+#delete_merged_file: true
+description: “Este es un libro para el proyecto a desarrollar durante el curso de análisis de series de tiempo”
+bibliography: references.bib
+---
+

@@ -1,0 +1,53 @@
+# Contexto
+
+Los eventos hidrometeorológicos extremos constituyen uno de los desafíos más críticos para la seguridad humana, la infraestructura y el desarrollo sostenible en regiones vulnerables. Inundaciones, avenidas torrenciales, corrimientos de tierra y deslizamientos no solo ocasionan pérdidas económicas cuantiosas, sino que también cobran vidas, desplazan comunidades y deterioran ecosistemas. Por ejemplo:
+
+-   En Colombia, el municipio de **Bello (Antioquia)** sufrió un grave deslizamiento de tierra en junio de 2025, provocado por fuertes lluvias. En ese evento murieron al menos **11 personas** y varias quedaron desaparecidas, además de daños estructurales importantes en viviendas y vías. [@elpaisSTS250625]
+-   En México, lluvias torrenciales recientes desencadenaron inundaciones y deslizamientos que provocaron **al menos 64 muertes** y decenas de personas desaparecidas. [@reuters131025]
+-   A nivel histórico, la tragedia de **Mocoa (Putumayo, Colombia, 2017)** es un referente de la magnitud del riesgo climático: lluvias intensas desencadenaron avenidas fluvio-torrenciales y aludes que afectaron diecisiete barrios, con un saldo oficial de cientos de muertos, desaparecidos y miles de damnificado. [@youtubeEE020417]
+
+Estos casos evidencian que, con demasiada frecuencia, los sistemas de alerta y respuesta quedan rebasados por la velocidad y fuerza de los fenómenos. Las consecuencias son irreversibles: vidas perdidas, daños a viviendas, puentes y redes de servicios básicos, interrupciones en la movilidad y grandes impactos sociales.
+
+En este contexto, es fundamental contar con herramientas capaces de anticipar las condiciones que preceden a estos eventos. No basta con reaccionar; es necesario **predecir**, en la medida de lo posible, las variables hidrometeorológicas (como precipitación, caudales o humedad del suelo) que actúan como disparadoras del riesgo. Si se logra monitorear y proyectar su evolución, se pueden diseñar alertas tempranas, ordenar el uso del suelo, priorizar intervenciones estructurales y guiar la evacuación o mitigación antes de que ocurra el desastre.
+
+## Importancia del pronóstico hidrometeorológico en la gestión del riesgo
+
+El pronóstico hidrometeorológico constituye una herramienta esencial para **anticipar, prevenir y mitigar los efectos de los eventos naturales extremos**. En un contexto de variabilidad climática creciente, contar con la capacidad de predecir la magnitud y el comportamiento de fenómenos como lluvias intensas, avenidas torrenciales, deslizamientos o sequías permite **reducir la exposición al riesgo, proteger vidas humanas y optimizar la planificación del territorio**.
+
+### Anticipación y reducción de impactos
+
+Los sistemas de pronóstico permiten **emitir alertas tempranas**, planificar evacuaciones y diseñar estrategias preventivas antes de que ocurra un evento extremo. Esto resulta crítico en zonas de alta vulnerabilidad, como las cuencas andinas del Valle del Cauca, donde precipitaciones extraordinarias pueden desencadenar movimientos en masa o inundaciones súbitas.
+
+Estudios recientes han demostrado que el uso de **modelos de aprendizaje automático** y técnicas de optimización puede mejorar significativamente la predicción de estos eventos. Por ejemplo, @saha2021 desarrollaron un modelo de pronóstico para **identificar zonas susceptibles a erosión en regiones monzónicas**, mostrando que la integración de datos climáticos y topográficos favorece la toma de decisiones preventivas en la gestión de suelos.
+
+### Apoyo a la planificación territorial y ambiental
+
+El pronóstico también cumple un papel estratégico en el **ordenamiento territorial** y en la **planificación del uso del suelo**. En este sentido, @chakrabortty2020 propusieron un enfoque de modelación geoespacial para **identificar zonas críticas de erosión** mediante datos satelitales y SIG, evidenciando que las predicciones hidrológicas facilitan la delimitación de áreas de amenaza y priorizan acciones de restauración ambiental. De manera complementaria, @habibie2020 demostraron que la integración de pronósticos climáticos con análisis multicriterio y sistemas de información geográfica puede **optimizar la asignación del territorio agrícola** y reducir el impacto de las variaciones climáticas sobre la productividad.
+
+### Fortalecimiento de la gestión del recurso hídrico y la sostenibilidad
+
+El pronóstico hidrometeorológico no solo se asocia a la respuesta ante emergencias, sino también al manejo sostenible de los recursos. @kayhomayoon2022 mostraron que los modelos híbridos de inteligencia artificial permiten **predecir la evaporación en embalses bajo escenarios de cambio climático**, lo que representa una herramienta crucial para la **gestión integral del agua** y la planificación de la oferta hídrica futura.\
+
+De igual forma, @melton2022 utilizaron técnicas de *machine learning* para mapear la **extensión global de turberas y humedales**, demostrando que los pronósticos basados en variables climáticas, geomorfológicas y de vegetación son esenciales para entender **los flujos de agua y carbono a escala planetaria**. Este tipo de investigaciones subraya la conexión entre la predicción hidrológica, la mitigación del cambio climático y la preservación de ecosistemas estratégicos.
+
+### Valor agregado del pronóstico para la gestión del riesgo
+
+La capacidad de anticipar el comportamiento de las variables hidrometeorológicas otorga a los gestores del riesgo una **ventaja operativa y estratégica**. Permite optimizar la distribución de recursos, fortalecer los sistemas de monitoreo y generar escenarios de planificación basados en evidencia. Además, la comparación de modelos predictivos, como los aplicados por @morales2021 para identificar factores desencadenantes de deslizamientos, contribuye al **aprendizaje institucional** y a la mejora continua de los mecanismos de
+
+En síntesis, el pronóstico hidrometeorológico **trasciende el ámbito técnico para convertirse en una herramienta de gobernanza ambiental**. Permite pasar de la reacción a la anticipación, apoyando decisiones sostenibles que integran la ciencia de datos, la ingeniería y la gestión del riesgo para **proteger comunidades, ecosistemas e infraestructura frente a los impactos del clima extremo**.
+
+## Propuesta de información a trabajar: Pronóstico de variables hidrometeorológicas para la gestión del riesgo en el Valle del Cauca
+
+El proyecto se orientará al **análisis y pronóstico de variables hidrometeorológicas**, con énfasis en la **precipitación, el caudal y la humedad del suelo**, como insumos fundamentales para comprender los procesos que originan **deslizamientos, avenidas torrenciales e inundaciones** en el departamento del **Valle del Cauca (Colombia)**. A partir del estudio de series de tiempo históricas y de la aplicación de modelos predictivos, se buscará **identificar patrones de comportamiento, estimar tendencias y anticipar condiciones críticas** que puedan incrementar la amenaza en zonas de alta susceptibilidad.
+
+Durante el desarrollo del curso se llevará a cabo la **recopilación, depuración y modelación estadística y computacional** de registros hidrometeorológicos, con el propósito de evaluar su evolución temporal y desarrollar **modelos de pronóstico basados en inteligencia artificial y métodos estadísticos de series de tiempo**. Estos modelos permitirán **simular escenarios futuros** y estimar el impacto potencial de las variaciones climáticas sobre los procesos hidrológicos locales, fortaleciendo las capacidades de **gestión del riesgo y planificación territorial** en la región.
+
+El pronóstico de este tipo de información adquiere especial relevancia en el contexto actual de **cambio climático y aumento de la variabilidad atmosférica**. La predicción de variables como la lluvia o el caudal no solo posibilita **anticipar eventos extremos**, sino que también contribuye a determinar su **frecuencia y magnitud mediante periodos de retorno**, herramienta clave para la **zonificación de amenazas** y la formulación de **planes de mitigación y adaptación**. Estudios recientes han demostrado la utilidad de integrar modelos de pronóstico hidrometeorológico en la planificación sostenible del territorio. Por ejemplo, @kayhomayoon2022 evidencian que los modelos de predicción permiten evaluar el impacto del cambio climático sobre los cuerpos de agua, mientras que @chakrabortty2020 y @habibie2020 resaltan su valor en la identificación de áreas críticas de erosión y en la optimización del uso del suelo. Estas experiencias respaldan la pertinencia de desarrollar herramientas de predicción local que transformen la información climática en conocimiento aplicable a la gestión del riesgo.
+
+Las **fuentes de información** provendrán principalmente de la **Corporación Autónoma Regional del Valle del Cauca (CVC)**, que dispone de registros históricos de precipitación, temperatura y caudales en estaciones distribuidas a lo largo del departamento. Complementariamente, se emplearán **datos públicos del IDEAM** y fuentes internacionales abiertas como **NASA POWER**, **NOAA** o **ERA5**, que permitirán **corroborar y ampliar las series temporales locales**, mejorando la cobertura espacial y la resolución temporal del análisis. Esta integración de fuentes busca garantizar una visión más completa y multiescalar de la dinámica hidrometeorológica del territorio.
+
+En lo referente a los **permisos y uso de la información**, los datos proporcionados por la CVC serán utilizados exclusivamente con **fines académicos y de investigación**, citando de manera explícita la procedencia de la información y respetando las políticas institucionales de uso y confidencialidad. Los datos abiertos se emplearán bajo sus **licencias de libre acceso y uso no comercial**, siguiendo buenas prácticas de manejo, trazabilidad y reproducibilidad científica.
+
+En síntesis, este proyecto buscará **diseñar un modelo de pronóstico hidrometeorológico** que, a partir del análisis histórico de variables climáticas, permita **mejorar la comprensión de los eventos extremos y fortalecer las estrategias de prevención, alerta temprana y planificación territorial** en el Valle del Cauca. De esta forma, se espera aportar **evidencia técnica y científica** que respalde las decisiones institucionales y comunitarias frente a la gestión integral del riesgo, contribuyendo al desarrollo sostenible y a la resiliencia climática del territorio.territorio vallecaucano.
+
+# Referencias
