@@ -1,0 +1,62 @@
+# Bookdown output
+_book/
+_bookdown_files/
+*.html
+*.pdf
+*.epub
+*.mobi
+
+# RMarkdown/knitr cache and temporary files
+*_cache/
+*_files/
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# R temporary files
+*.Rout
+*.log
+*.aux
+*.out
+*.toc
+*.lot
+*.lof
+*.blg
+*.bbl
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# LaTeX intermediate files
+*.tex
+*.cls
+*.sty
+*.bst
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# IDE specific
+.vscode/
+.idea/
+
+# Pandoc temporary files
+*.utf8.md
+*.knit.md
+
+# Output directories (keep only source files)
+docs/
+libs/
+
+# Package files (if using packrat/renv)
+packrat/
+renv/
+.Rprofile
