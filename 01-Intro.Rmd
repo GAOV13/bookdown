@@ -49,5 +49,3 @@ Las **fuentes de información** provendrán principalmente de la **Corporación 
 En lo referente a los **permisos y uso de la información**, los datos proporcionados por la CVC serán utilizados exclusivamente con **fines académicos y de investigación**, citando de manera explícita la procedencia de la información y respetando las políticas institucionales de uso y confidencialidad. Los datos abiertos se emplearán bajo sus **licencias de libre acceso y uso no comercial**, siguiendo buenas prácticas de manejo, trazabilidad y reproducibilidad científica.
 
 En síntesis, este proyecto buscará **diseñar un modelo de pronóstico hidrometeorológico** que, a partir del análisis histórico de variables climáticas, permita **mejorar la comprensión de los eventos extremos y fortalecer las estrategias de prevención, alerta temprana y planificación territorial** en el Valle del Cauca. De esta forma, se espera aportar **evidencia técnica y científica** que respalde las decisiones institucionales y comunitarias frente a la gestión integral del riesgo, contribuyendo al desarrollo sostenible y a la resiliencia climática del territorio.territorio vallecaucano.
-
-# Referencias
