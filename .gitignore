@@ -1,7 +1,6 @@
-# Bookdown output
+# Bookdown output (keep docs/ for GitHub Pages)
 _book/
 _bookdown_files/
-*.html
 *.pdf
 *.epub
 *.mobi
@@ -52,9 +51,8 @@ Thumbs.db
 *.utf8.md
 *.knit.md
 
-# Output directories (keep only source files)
-docs/
-libs/
+# GitHub Pages - NO ignorar docs/
+# docs/ se usa para publicar en GitHub Pages
 
 # Package files (if using packrat/renv)
 packrat/

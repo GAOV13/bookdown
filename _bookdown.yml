@@ -1,5 +1,5 @@
 book_filename: "index"  # Nombre del archivo principal
-output_dir: "_book"     # Carpeta de salida del libro
+output_dir: "docs"      # Carpeta de salida para GitHub Pages
 delete_merged_file: false
 github_repo: "GAOV13/bookdown"  # Nombre del repositorio en GitHub
 
