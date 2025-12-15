@@ -1,0 +1,379 @@
+# Preparación de Datos y Modelos {#preparacion}
+
+Este capítulo ejecuta toda la preparación de datos, limpieza, creación de series temporales y ajuste de modelos. Los objetos generados aquí se utilizan en los capítulos posteriores para visualizaciones y análisis, evitando duplicación de código.
+
+```{r setup-global, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  cache = TRUE,
+  cache.lazy = FALSE
+)
+```
+
+## Carga de Librerías
+
+```{r cargar-librerias, message=FALSE, warning=FALSE}
+# Librerías necesarias para todo el proyecto
+library(tidyverse)
+library(lubridate)
+library(forecast)
+library(zoo)
+library(gridExtra)
+library(prophet)
+
+# Suprimir mensajes de Prophet
+suppressMessages(library(prophet))
+```
+
+## Lectura y Limpieza de Datos
+
+```{r lectura-datos}
+# Leer datos originales
+datos <- read_csv("Data/Excel/monthly_precipitation.csv", show_col_types = FALSE)
+
+# Preparar datos
+datos_limpios <- datos %>%
+  mutate(
+    DATE = ym(DATE),
+    # Convertir precipitación (mm x 10 -> mm)
+    PRCP = PRCP / 10,
+    # Convertir temperaturas (décimas de grado -> grados)
+    TMAX = TMAX / 10,
+    TMIN = TMIN / 10,
+    TAVG = TAVG / 10
+  )
+
+# Información antes de interpolación
+cat("=== DATOS ORIGINALES ===\n")
+cat("Total de observaciones:", nrow(datos_limpios), "\n")
+cat("Valores faltantes en PRCP:", sum(is.na(datos_limpios$PRCP)), "\n")
+cat("Porcentaje de NAs:", round(100 * sum(is.na(datos_limpios$PRCP)) / nrow(datos_limpios), 2), "%\n")
+cat("Rango temporal:", format(min(datos_limpios$DATE), "%Y-%m"), "a", 
+    format(max(datos_limpios$DATE), "%Y-%m"), "\n\n")
+```
+
+## Interpolación de Valores Faltantes
+
+```{r interpolacion}
+# Identificar posiciones con datos válidos
+indices_validos <- which(!is.na(datos_limpios$PRCP))
+
+# Aplicar interpolación conservadora
+if(length(indices_validos) >= 2) {
+  # Interpolación lineal con límite de gaps
+  datos_limpios$PRCP <- na.approx(datos_limpios$PRCP, maxgap = 3, na.rm = FALSE)
+  
+  # Rellenar NAs restantes (inicio/final)
+  datos_limpios$PRCP <- na.locf(datos_limpios$PRCP, na.rm = FALSE, fromLast = FALSE)
+  datos_limpios$PRCP <- na.locf(datos_limpios$PRCP, na.rm = FALSE, fromLast = TRUE)
+  
+  # Asegurar valores no negativos
+  datos_limpios <- datos_limpios %>%
+    mutate(PRCP = pmax(PRCP, 0))
+  
+  cat("=== DESPUÉS DE INTERPOLACIÓN ===\n")
+  cat("Valores faltantes restantes:", sum(is.na(datos_limpios$PRCP)), "\n")
+  cat("Precipitación promedio:", round(mean(datos_limpios$PRCP, na.rm = TRUE), 2), "mm\n")
+  cat("Precipitación máxima:", round(max(datos_limpios$PRCP, na.rm = TRUE), 2), "mm\n")
+  cat("Percentil 99:", round(quantile(datos_limpios$PRCP, 0.99, na.rm = TRUE), 2), "mm\n\n")
+} else {
+  stop("No hay suficientes datos válidos para interpolación")
+}
+```
+
+## Creación de Series Temporales
+
+```{r crear-series}
+# Serie completa (zoo)
+ts_mensual <- zoo(datos_limpios$PRCP, order.by = datos_limpios$DATE)
+
+# Serie para análisis (1972-07 a 1999-12)
+ts_analisis <- window(ts_mensual, start = as.Date("1972-07-01"), end = as.Date("1999-12-01"))
+
+# Dataframe correspondiente
+datos_analisis <- datos_limpios %>%
+  filter(DATE >= ym("1972-07") & DATE <= ym("1999-12"))
+
+cat("=== SERIES TEMPORALES CREADAS ===\n")
+cat("Serie completa: ", length(ts_mensual), "observaciones\n")
+cat("Serie de análisis: ", length(ts_analisis), "observaciones\n")
+cat("Período:", format(start(ts_analisis), "%Y-%m"), "a", 
+    format(end(ts_analisis), "%Y-%m"), "\n\n")
+```
+
+## Partición Train/Test
+
+```{r particion-train-test}
+# Punto de corte: diciembre 1997
+fecha_corte <- as.Date("1997-12-01")
+
+# Conjunto de entrenamiento (1972-07 a 1997-12)
+ts_train <- window(ts_analisis, end = fecha_corte)
+datos_train <- datos_analisis %>%
+  filter(DATE <= ym("1997-12"))
+
+# Conjunto de prueba (1998-01 a 1998-12)
+ts_test <- window(ts_analisis, start = as.Date("1998-01-01"), end = as.Date("1998-12-01"))
+datos_test <- datos_analisis %>%
+  filter(DATE >= ym("1998-01") & DATE <= ym("1998-12"))
+
+# Serie regular para modelos que lo requieren (Holt-Winters, SARIMA)
+ts_train_regular <- ts(
+  coredata(ts_train), 
+  start = c(year(index(ts_train)[1]), month(index(ts_train)[1])),
+  frequency = 12
+)
+
+ts_test_regular <- ts(
+  coredata(ts_test),
+  start = c(year(index(ts_test)[1]), month(index(ts_test)[1])),
+  frequency = 12
+)
+
+cat("=== PARTICIÓN TRAIN/TEST ===\n")
+cat("ENTRENAMIENTO:\n")
+cat("  Período:", format(start(ts_train), "%Y-%m"), "a", 
+    format(end(ts_train), "%Y-%m"), "\n")
+cat("  Observaciones:", length(ts_train), "\n\n")
+cat("PRUEBA:\n")
+cat("  Período:", format(start(ts_test), "%Y-%m"), "a", 
+    format(end(ts_test), "%Y-%m"), "\n")
+cat("  Observaciones:", length(ts_test), "\n\n")
+```
+
+## Ajuste del Modelo Holt-Winters
+
+```{r ajuste-hw, cache=TRUE}
+# Ajustar modelo con parámetros óptimos
+hw_model <- HoltWinters(
+  ts_train_regular, 
+  seasonal = "additive",
+  alpha = NULL,  # Estimación automática
+  beta = NULL,
+  gamma = NULL
+)
+
+# Pronóstico para 12 meses (1998)
+hw_forecast <- forecast(hw_model, h = 12, level = 95)
+
+# Extraer componentes del pronóstico
+hw_pred <- as.numeric(hw_forecast$mean)
+hw_lower <- as.numeric(hw_forecast$lower)
+hw_upper <- as.numeric(hw_forecast$upper)
+hw_fitted <- fitted(hw_model)
+
+# Calcular métricas
+hw_errores <- as.numeric(ts_test) - hw_pred
+MAE_hw <- mean(abs(hw_errores))
+RMSE_hw <- sqrt(mean(hw_errores^2))
+MAPE_hw <- mean(abs(hw_errores / pmax(as.numeric(ts_test), 0.1))) * 100
+
+# Cobertura del intervalo de confianza
+dentro_IC_hw <- sum(as.numeric(ts_test) >= hw_lower & as.numeric(ts_test) <= hw_upper)
+cobertura_hw <- (dentro_IC_hw / length(ts_test)) * 100
+
+cat("=== MODELO HOLT-WINTERS AJUSTADO ===\n")
+cat("Parámetros estimados:\n")
+cat("  Alpha (nivel):", round(hw_model$alpha, 4), "\n")
+cat("  Beta (tendencia):", round(hw_model$beta, 4), "\n")
+cat("  Gamma (estacionalidad):", round(hw_model$gamma, 4), "\n\n")
+cat("Métricas de pronóstico (1998):\n")
+cat("  MAE:", round(MAE_hw, 3), "mm\n")
+cat("  RMSE:", round(RMSE_hw, 3), "mm\n")
+cat("  MAPE:", round(MAPE_hw, 2), "%\n")
+cat("  Cobertura IC:", round(cobertura_hw, 1), "%\n\n")
+```
+
+## Ajuste del Modelo SARIMA
+
+```{r ajuste-sarima, cache=TRUE}
+# Identificación automática con auto.arima
+# Forzar búsqueda de componentes estacionales para datos mensuales
+sarima_model <- auto.arima(
+  ts_train_regular,
+  seasonal = TRUE,           # Forzar búsqueda de estacionalidad
+  stepwise = FALSE,          # Búsqueda exhaustiva (más lenta pero mejor)
+  approximation = FALSE,     # Usar MLE completo
+  trace = FALSE,             # No mostrar búsqueda
+  max.p = 3,                 # Máximo AR no estacional
+  max.q = 3,                 # Máximo MA no estacional  
+  max.P = 2,                 # Máximo AR estacional
+  max.Q = 2,                 # Máximo MA estacional
+  max.d = 1,                 # Máxima diferenciación
+  max.D = 1,                 # Máxima diferenciación estacional
+  ic = "aicc",               # Criterio AICc (mejor para muestras pequeñas)
+  lambda = "auto"            # Transformación Box-Cox automática para normalizar
+)
+
+# Pronóstico para 12 meses
+sarima_forecast <- forecast(sarima_model, h = 12, level = 95)
+
+# Extraer componentes
+sarima_pred <- as.numeric(sarima_forecast$mean)
+sarima_lower <- as.numeric(sarima_forecast$lower)
+sarima_upper <- as.numeric(sarima_forecast$upper)
+sarima_fitted <- fitted(sarima_model)
+sarima_residuos <- residuals(sarima_model)
+
+# Calcular métricas
+sarima_errores <- as.numeric(ts_test) - sarima_pred
+MAE_sarima <- mean(abs(sarima_errores))
+RMSE_sarima <- sqrt(mean(sarima_errores^2))
+MAPE_sarima <- mean(abs(sarima_errores / pmax(as.numeric(ts_test), 0.1))) * 100
+
+# Cobertura del intervalo
+dentro_IC_sarima <- sum(as.numeric(ts_test) >= sarima_lower & as.numeric(ts_test) <= sarima_upper)
+cobertura_sarima <- (dentro_IC_sarima / length(ts_test)) * 100
+
+# Extraer orden del modelo de forma segura
+orden <- arimaorder(sarima_model)
+if(length(orden) >= 6) {
+  cat("=== MODELO SARIMA AJUSTADO ===\n")
+  cat("Orden identificado: SARIMA(", orden[1], ",", orden[2], ",", orden[3], 
+      ")(", orden[4], ",", orden[5], ",", orden[6], ")[12]\n\n", sep="")
+} else {
+  cat("=== MODELO ARIMA AJUSTADO ===\n")
+  cat("Orden identificado: ARIMA(", orden[1], ",", orden[2], ",", orden[3], ")\n\n", sep="")
+}
+
+cat("Métricas de pronóstico (1998):\n")
+cat("  MAE:", round(MAE_sarima, 3), "mm\n")
+cat("  RMSE:", round(RMSE_sarima, 3), "mm\n")
+cat("  MAPE:", round(MAPE_sarima, 2), "%\n")
+cat("  Cobertura IC:", round(cobertura_sarima, 1), "%\n\n")
+```
+
+## Ajuste del Modelo Prophet
+
+```{r ajuste-prophet, cache=TRUE}
+# Preparar datos para Prophet (requiere columnas 'ds' y 'y')
+prophet_train <- data.frame(
+  ds = index(ts_train),
+  y = as.numeric(coredata(ts_train))
+)
+
+prophet_test_df <- data.frame(
+  ds = index(ts_test),
+  y = as.numeric(coredata(ts_test))
+)
+
+# Alias para compatibilidad con capítulo Prophet
+prophet_test <- prophet_test_df
+
+# Ajustar modelo
+prophet_model <- prophet(
+  prophet_train,
+  yearly.seasonality = TRUE,
+  weekly.seasonality = FALSE,
+  daily.seasonality = FALSE,
+  seasonality.mode = 'additive',
+  changepoint.prior.scale = 0.05,
+  seasonality.prior.scale = 10,
+  interval.width = 0.95
+)
+
+# Pronóstico in-sample (para componentes)
+prophet_insample <- predict(prophet_model, prophet_train)
+
+# Pronóstico out-of-sample (1998)
+future_dates <- data.frame(ds = prophet_test_df$ds)
+prophet_forecast <- predict(prophet_model, future_dates)
+
+# Extraer componentes
+prophet_pred <- prophet_forecast$yhat
+prophet_lower <- prophet_forecast$yhat_lower
+prophet_upper <- prophet_forecast$yhat_upper
+prophet_trend <- prophet_forecast$trend
+prophet_yearly <- prophet_forecast$yearly
+
+# Residuos in-sample
+prophet_residuos <- prophet_train$y - prophet_insample$yhat
+
+# Calcular métricas
+prophet_errores <- prophet_test_df$y - prophet_pred
+MAE_prophet <- mean(abs(prophet_errores))
+RMSE_prophet <- sqrt(mean(prophet_errores^2))
+MAPE_prophet <- mean(abs(prophet_errores / pmax(prophet_test_df$y, 0.1))) * 100
+
+# Cobertura del intervalo
+dentro_IC_prophet <- sum(prophet_test_df$y >= prophet_lower & 
+                         prophet_test_df$y <= prophet_upper)
+cobertura_prophet <- (dentro_IC_prophet / length(prophet_test_df$y)) * 100
+
+cat("=== MODELO PROPHET AJUSTADO ===\n")
+cat("Configuración:\n")
+cat("  Estacionalidad anual: Activada (Fourier)\n")
+cat("  Modo: Aditivo\n")
+cat("  Changepoints detectados:", length(prophet_model$changepoints), "\n\n")
+cat("Métricas de pronóstico (1998):\n")
+cat("  MAE:", round(MAE_prophet, 3), "mm\n")
+cat("  RMSE:", round(RMSE_prophet, 3), "mm\n")
+cat("  MAPE:", round(MAPE_prophet, 2), "%\n")
+cat("  Cobertura IC:", round(cobertura_prophet, 1), "%\n\n")
+```
+
+## Resumen de Objetos Creados
+
+Los siguientes objetos están disponibles para los capítulos posteriores:
+
+**Datos:**
+
+- `datos_limpios`: Dataframe con todos los datos limpios e interpolados
+- `datos_analisis`: Dataframe filtrado (1972-07 a 1999-12)
+- `datos_train`: Dataframe de entrenamiento (1972-07 a 1997-12)
+- `datos_test`: Dataframe de prueba (1998)
+
+**Series temporales:**
+
+- `ts_mensual`: Serie completa (zoo)
+- `ts_analisis`: Serie filtrada (zoo)
+- `ts_train`: Serie de entrenamiento (zoo)
+- `ts_test`: Serie de prueba (zoo)
+- `ts_train_regular`: Serie de entrenamiento (ts regular, frequency=12)
+- `ts_test_regular`: Serie de prueba (ts regular, frequency=12)
+
+**Modelos:**
+
+- `hw_model`: Modelo Holt-Winters ajustado
+- `sarima_model`: Modelo SARIMA ajustado
+- `prophet_model`: Modelo Prophet ajustado
+
+**Pronósticos:**
+
+- `hw_forecast`: Objeto forecast de Holt-Winters
+- `hw_pred`, `hw_lower`, `hw_upper`: Vectores de pronóstico HW
+- `sarima_forecast`: Objeto forecast de SARIMA
+- `sarima_pred`, `sarima_lower`, `sarima_upper`: Vectores de pronóstico SARIMA
+- `prophet_forecast`: Dataframe de pronóstico Prophet
+- `prophet_pred`, `prophet_lower`, `prophet_upper`: Vectores de pronóstico Prophet
+
+**Componentes de modelos:**
+
+- `hw_fitted`: Valores ajustados Holt-Winters
+- `sarima_fitted`: Valores ajustados SARIMA
+- `sarima_residuos`: Residuos SARIMA
+- `prophet_insample`: Predicción in-sample Prophet (con componentes)
+- `prophet_residuos`: Residuos Prophet
+- `prophet_trend`: Componente de tendencia Prophet
+- `prophet_yearly`: Componente estacional Prophet
+
+**Métricas:**
+
+- `MAE_hw`, `RMSE_hw`, `MAPE_hw`, `cobertura_hw`: Métricas Holt-Winters
+- `MAE_sarima`, `RMSE_sarima`, `MAPE_sarima`, `cobertura_sarima`: Métricas SARIMA
+- `MAE_prophet`, `RMSE_prophet`, `MAPE_prophet`, `cobertura_prophet`: Métricas Prophet
+
+**Errores:**
+
+- `hw_errores`: Errores de pronóstico Holt-Winters
+- `sarima_errores`: Errores de pronóstico SARIMA
+- `prophet_errores`: Errores de pronóstico Prophet
+
+```{r resumen-final}
+cat("=== PREPARACIÓN COMPLETADA ===\n\n")
+cat("Total de objetos creados: 50+\n")
+cat("\nLos capítulos siguientes pueden usar estos objetos directamente\n")
+cat("sin necesidad de recargar o recalcular datos.\n")
+```
