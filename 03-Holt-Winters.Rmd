@@ -1,0 +1,281 @@
+# Suavizamiento Exponencial: Método Holt-Winters {#holt-winters}
+
+El método de Holt-Winters es una técnica de suavizamiento exponencial que captura tres componentes de una serie temporal: nivel, tendencia y estacionalidad. A diferencia de los promedios móviles simples, este método asigna pesos exponencialmente decrecientes a las observaciones pasadas, dando mayor importancia a los datos más recientes.
+
+**Nota**: Los datos y el modelo Holt-Winters fueron preparados en el Capítulo \@ref(preparacion). Los objetos `hw_model`, `hw_forecast`, `ts_train`, `ts_test` y las métricas están disponibles directamente.
+
+## Resumen del Modelo Ajustado
+
+```{r resumen-hw}
+cat("=== MODELO HOLT-WINTERS ===\n\n")
+cat("Partición de datos:\n")
+cat("  Entrenamiento:", format(start(ts_train), "%Y-%m"), "a", 
+    format(end(ts_train), "%Y-%m"), "| n =", length(ts_train), "\n")
+cat("  Prueba:", format(start(ts_test), "%Y-%m"), "a", 
+    format(end(ts_test), "%Y-%m"), "| n =", length(ts_test), "\n\n")
+
+cat("Métricas de pronóstico (1998):\n")
+cat("  MAE:", round(MAE_hw, 3), "mm\n")
+cat("  RMSE:", round(RMSE_hw, 3), "mm\n")
+cat("  MAPE:", round(MAPE_hw, 2), "%\n")
+cat("  Cobertura IC:", round(cobertura_hw, 1), "%\n")
+```
+
+## Modelo Holt-Winters Aditivo
+
+Dado que la amplitud de las fluctuaciones estacionales se mantiene relativamente constante (evidencia de la descomposición STL en el capítulo anterior), utilizamos el modelo aditivo de Holt-Winters.
+
+```{r parametros-hw}
+cat("=== PARÁMETROS DEL MODELO HOLT-WINTERS ===\n\n")
+cat("Parámetros de suavizamiento estimados:\n")
+cat("  Alpha (nivel):", round(hw_model$alpha, 4), "\n")
+cat("  Beta (tendencia):", round(hw_model$beta, 4), "\n")
+cat("  Gamma (estacionalidad):", round(hw_model$gamma, 4), "\n\n")
+
+cat("Interpretación:\n")
+cat("  • Alpha alto indica que el nivel se ajusta rápidamente a nuevas observaciones\n")
+cat("  • Beta bajo sugiere que la tendencia cambia lentamente\n")
+cat("  • Gamma alto implica que el patrón estacional se actualiza con cada ciclo\n")
+```
+
+## Análisis Comparativo: Serie Original vs. Suavizado
+
+```{r comparacion-original-suavizado, fig.width=12, fig.height=8}
+# Extraer valores ajustados (fitted values)
+valores_suavizados <- hw_model$fitted[, "xhat"]
+
+# Crear dataframe para comparación
+comparacion <- data.frame(
+  Fecha = index(ts_train),
+  Original = coredata(ts_train),
+  Suavizado = c(rep(NA, 12), valores_suavizados)
+)
+
+# Gráfico comparativo
+ggplot(comparacion, aes(x = Fecha)) +
+  geom_line(aes(y = Original, color = "Serie Original"), alpha = 0.5, linewidth = 0.7) +
+  geom_line(aes(y = Suavizado, color = "Holt-Winters Suavizado"), linewidth = 1.0) +
+  scale_color_manual(
+    values = c("Serie Original" = "black", "Holt-Winters Suavizado" = "blue")
+  ) +
+  labs(
+    title = "Comparación: Serie Original vs. Suavizado Holt-Winters",
+    subtitle = "Modelo aditivo aplicado al conjunto de entrenamiento (1972-1997)",
+    x = "Fecha",
+    y = "Precipitación (mm)",
+    color = ""
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "bottom"
+  )
+```
+
+**Interpretación del suavizado:**
+
+- **Reducción de ruido**: El suavizado Holt-Winters elimina fluctuaciones aleatorias de corto plazo, revelando el patrón subyacente de la serie.
+
+- **Preservación de estacionalidad**: A diferencia de los promedios móviles simples, Holt-Winters mantiene la estructura estacional bimodal característica de la precipitación en Cali.
+
+- **Captura de tendencia local**: Aunque la serie global es estacionaria, el modelo puede capturar cambios graduales en el nivel durante períodos específicos.
+
+- **Retardo mínimo**: El método de suavizamiento exponencial tiene menor retardo que los promedios móviles, siguiendo más cercanamente los cambios en la serie.
+
+## Descomposición de la Serie Suavizada
+
+```{r decompose-suavizado, fig.width=12, fig.height=10}
+# Crear serie temporal con valores suavizados (excluyendo NAs iniciales)
+ts_suavizado <- ts(valores_suavizados, 
+                   start = c(1973, 7),  # Comienza 12 meses después del inicio
+                   frequency = 12)
+
+# Descomposición STL del suavizado
+decomp_suavizado <- stl(ts_suavizado, s.window = "periodic")
+
+# Visualizar descomposición
+plot(decomp_suavizado, main = "Descomposición STL - Serie Suavizada (Holt-Winters)")
+```
+
+**Comparación de componentes:**
+
+```{r comparar-componentes, fig.width=12, fig.height=10}
+# Crear descomposición de la serie original para comparar
+ts_original_regular <- ts(coredata(ts_train), 
+                          start = c(year(index(ts_train)[1]), month(index(ts_train)[1])),
+                          frequency = 12)
+decomp_original <- stl(ts_original_regular, s.window = "periodic")
+
+# Extraer componentes
+comp_original <- decomp_original$time.series
+comp_suavizado <- decomp_suavizado$time.series
+
+# Crear gráficos comparativos
+par(mfrow = c(3, 2), mar = c(4, 4, 3, 2))
+
+# Tendencia
+plot(comp_original[, "trend"], main = "Tendencia - Original", 
+     ylab = "Precipitación (mm)", col = "black", lwd = 1.5)
+plot(comp_suavizado[, "trend"], main = "Tendencia - Suavizada",
+     ylab = "Precipitación (mm)", col = "blue", lwd = 1.5)
+
+# Estacionalidad
+plot(comp_original[, "seasonal"], main = "Estacionalidad - Original",
+     ylab = "Efecto Estacional (mm)", col = "black", lwd = 1.5)
+plot(comp_suavizado[, "seasonal"], main = "Estacionalidad - Suavizada",
+     ylab = "Efecto Estacional (mm)", col = "blue", lwd = 1.5)
+
+# Residuos
+plot(comp_original[, "remainder"], main = "Residuos - Original",
+     ylab = "Residuo (mm)", col = "black", lwd = 1)
+plot(comp_suavizado[, "remainder"], main = "Residuos - Suavizada",
+     ylab = "Residuo (mm)", col = "blue", lwd = 1)
+
+par(mfrow = c(1, 1))
+
+cat("\n=== ANÁLISIS DE COMPONENTES ===\n\n")
+cat("TENDENCIA:\n")
+cat("  Original - Rango:", round(range(comp_original[, "trend"], na.rm = TRUE), 2), "\n")
+cat("  Suavizada - Rango:", round(range(comp_suavizado[, "trend"], na.rm = TRUE), 2), "\n\n")
+
+cat("ESTACIONALIDAD:\n")
+cat("  Original - Amplitud:", round(diff(range(comp_original[, "seasonal"], na.rm = TRUE)), 2), "mm\n")
+cat("  Suavizada - Amplitud:", round(diff(range(comp_suavizado[, "seasonal"], na.rm = TRUE)), 2), "mm\n\n")
+
+cat("RESIDUOS:\n")
+cat("  Original - Desv. Est.:", round(sd(comp_original[, "remainder"], na.rm = TRUE), 2), "mm\n")
+cat("  Suavizada - Desv. Est.:", round(sd(comp_suavizado[, "remainder"], na.rm = TRUE), 2), "mm\n")
+cat("  Reducción de variabilidad:", 
+    round(100 * (1 - sd(comp_suavizado[, "remainder"], na.rm = TRUE) / 
+                   sd(comp_original[, "remainder"], na.rm = TRUE)), 1), "%\n")
+```
+
+## Pronóstico para el Período de Prueba
+
+Utilizamos el modelo ajustado para predecir el período de prueba disponible y comparamos con los valores observados.
+
+```{r pronostico-hw, fig.width=12, fig.height=8}
+# Determinar cuántas observaciones hay disponibles en el conjunto de prueba
+n_test <- length(ts_test)
+
+# Generar pronóstico para el número de observaciones disponibles
+hw_forecast <- predict(hw_model, n.ahead = n_test, prediction.interval = TRUE)
+
+# Usar las fechas reales del conjunto de prueba
+fechas_test <- index(ts_test)
+
+cat("=== INFORMACIÓN DEL PRONÓSTICO ===\n\n")
+cat("Período de pronóstico:", format(min(fechas_test), "%Y-%m"), "a", 
+    format(max(fechas_test), "%Y-%m"), "\n")
+cat("Número de observaciones:", n_test, "\n\n")
+
+# Crear dataframe con pronósticos
+datos_forecast <- data.frame(
+  Fecha = fechas_test,
+  Observado = as.numeric(coredata(ts_test)),
+  Pronostico = hw_forecast[, "fit"],
+  IC_inferior = hw_forecast[, "lwr"],
+  IC_superior = hw_forecast[, "upr"]
+)
+
+# Gráfico de pronóstico vs observado
+ggplot() +
+  # Intervalo de confianza
+  geom_ribbon(data = datos_forecast, 
+              aes(x = Fecha, ymin = IC_inferior, ymax = IC_superior),
+              fill = "blue", alpha = 0.1) +
+  # Línea de pronóstico
+  geom_line(data = datos_forecast, 
+            aes(x = Fecha, y = Pronostico, color = "Pronóstico HW"),
+            linewidth = 1.2) +
+  # Valores observados
+  geom_line(data = datos_forecast,
+            aes(x = Fecha, y = Observado, color = "Observado"),
+            linewidth = 1.0) +
+  geom_point(data = datos_forecast,
+             aes(x = Fecha, y = Observado, color = "Observado"),
+             size = 2) +
+  scale_color_manual(
+    values = c("Pronóstico HW" = "blue", "Observado" = "black")
+  ) +
+  labs(
+    title = "Pronóstico Holt-Winters vs. Valores Observados",
+    subtitle = paste("Período de prueba:", format(min(datos_forecast$Fecha), "%Y-%m"), "a", 
+                     format(max(datos_forecast$Fecha), "%Y-%m"), "| IC 95%"),
+    x = "Fecha",
+    y = "Precipitación (mm)",
+    color = ""
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "bottom"
+  )
+```
+
+## Evaluación del Desempeño del Modelo
+
+```{r metricas-evaluacion}
+# Calcular métricas de error
+errores <- datos_forecast$Observado - datos_forecast$Pronostico
+
+MAE <- mean(abs(errores))
+RMSE <- sqrt(mean(errores^2))
+MAPE <- mean(abs(errores / datos_forecast$Observado)) * 100
+
+# Precisión del pronóstico
+accuracy_pct <- 100 - MAPE
+
+cat("=== MÉTRICAS DE DESEMPEÑO DEL PRONÓSTICO ===\n\n")
+cat("Error Absoluto Medio (MAE):", round(MAE, 3), "mm\n")
+cat("Raíz del Error Cuadrático Medio (RMSE):", round(RMSE, 3), "mm\n")
+cat("Error Porcentual Absoluto Medio (MAPE):", round(MAPE, 2), "%\n")
+cat("Precisión del modelo:", round(accuracy_pct, 2), "%\n\n")
+
+# Análisis de cobertura del intervalo
+dentro_IC <- sum(datos_forecast$Observado >= datos_forecast$IC_inferior & 
+                  datos_forecast$Observado <= datos_forecast$IC_superior)
+cobertura <- (dentro_IC / nrow(datos_forecast)) * 100
+
+cat("Cobertura del intervalo de confianza (95%):", round(cobertura, 1), "%\n")
+cat("  Observaciones dentro del IC:", dentro_IC, "de", nrow(datos_forecast), "\n\n")
+
+# Test de normalidad de residuos
+shapiro_test <- shapiro.test(errores)
+cat("Test de Shapiro-Wilk (normalidad de residuos):\n")
+cat("  Estadístico W:", round(shapiro_test$statistic, 4), "\n")
+cat("  P-valor:", round(shapiro_test$p.value, 4), "\n")
+if(shapiro_test$p.value > 0.05) {
+  cat("  Conclusión: Los residuos siguen distribución normal (p > 0.05)\n")
+} else {
+  cat("  Conclusión: Los residuos NO siguen distribución normal (p < 0.05)\n")
+}
+```
+
+## Análisis de Residuos del Pronóstico
+
+```{r analisis-residuos-forecast, fig.width=12, fig.height=8}
+par(mfrow = c(2, 2))
+
+# Serie temporal de residuos
+plot(datos_forecast$Fecha, errores, type = "b", 
+     main = "Residuos del Pronóstico a lo Largo del Tiempo",
+     xlab = "Fecha", ylab = "Error (mm)", col = "blue", pch = 19)
+abline(h = 0, col = "gray40", lty = 2, lwd = 2)
+grid()
+
+# Histograma
+hist(errores, breaks = 10, col = "lightblue", border = "darkblue",
+     main = "Distribución de Residuos",
+     xlab = "Error (mm)", ylab = "Frecuencia")
+abline(v = 0, col = "red", lty = 2, lwd = 2)
+
+# Q-Q plot
+qqnorm(errores, main = "Q-Q Plot de Residuos", pch = 19, col = "steelblue")
+qqline(errores, col = "red", lwd = 2)
+
+# ACF de residuos
+acf(errores, main = "ACF de Residuos del Pronóstico", col = "darkblue", lwd = 2)
+
+par(mfrow = c(1, 1))
+```
