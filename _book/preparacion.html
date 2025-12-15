@@ -4,18 +4,18 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>2 Referencias | index.knit</title>
+  <title>3 Preparación de Datos y Modelos | index.knit</title>
   <meta name="description" content="" />
   <meta name="generator" content="bookdown 0.45 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="2 Referencias | index.knit" />
+  <meta property="og:title" content="3 Preparación de Datos y Modelos | index.knit" />
   <meta property="og:type" content="book" />
   
   
   
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="2 Referencias | index.knit" />
+  <meta name="twitter:title" content="3 Preparación de Datos y Modelos | index.knit" />
   
   
   
@@ -28,8 +28,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="contexto.html"/>
-<link rel="next" href="preparacion.html"/>
+<link rel="prev" href="referencias.html"/>
+<link rel="next" href="analisis-exploratorio.html"/>
 <script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
@@ -185,17 +185,152 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="referencias" class="section level1 hasAnchor" number="2">
-<h1><span class="header-section-number">2</span> Referencias<a href="referencias.html#referencias" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<div id="preparacion" class="section level1 hasAnchor" number="3">
+<h1><span class="header-section-number">3</span> Preparación de Datos y Modelos<a href="preparacion.html#preparacion" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>Este capítulo ejecuta toda la preparación de datos, limpieza, creación de series temporales y ajuste de modelos. Los objetos generados aquí se utilizan en los capítulos posteriores para visualizaciones y análisis, evitando duplicación de código.</p>
+<div id="carga-de-librerías" class="section level2 hasAnchor" number="3.1">
+<h2><span class="header-section-number">3.1</span> Carga de Librerías<a href="preparacion.html#carga-de-librer%C3%ADas" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+</div>
+<div id="lectura-y-limpieza-de-datos" class="section level2 hasAnchor" number="3.2">
+<h2><span class="header-section-number">3.2</span> Lectura y Limpieza de Datos<a href="preparacion.html#lectura-y-limpieza-de-datos" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>## === DATOS ORIGINALES ===</code></pre>
+<pre><code>## Total de observaciones: 428</code></pre>
+<pre><code>## Valores faltantes en PRCP: 71</code></pre>
+<pre><code>## Porcentaje de NAs: 16.59 %</code></pre>
+<pre><code>## Rango temporal: 1961-01 a 2024-01</code></pre>
+</div>
+<div id="interpolación-de-valores-faltantes" class="section level2 hasAnchor" number="3.3">
+<h2><span class="header-section-number">3.3</span> Interpolación de Valores Faltantes<a href="preparacion.html#interpolaci%C3%B3n-de-valores-faltantes" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>## === DESPUÉS DE INTERPOLACIÓN ===
+## Valores faltantes restantes: 0 
+## Precipitación promedio: 8.02 mm
+## Precipitación máxima: 29.34 mm
+## Percentil 99: 29.34 mm</code></pre>
+</div>
+<div id="creación-de-series-temporales" class="section level2 hasAnchor" number="3.4">
+<h2><span class="header-section-number">3.4</span> Creación de Series Temporales<a href="preparacion.html#creaci%C3%B3n-de-series-temporales" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>## === SERIES TEMPORALES CREADAS ===</code></pre>
+<pre><code>## Serie completa:  428 observaciones</code></pre>
+<pre><code>## Serie de análisis:  307 observaciones</code></pre>
+<pre><code>## Período: 1972-07 a 1999-12</code></pre>
+</div>
+<div id="partición-traintest" class="section level2 hasAnchor" number="3.5">
+<h2><span class="header-section-number">3.5</span> Partición Train/Test<a href="preparacion.html#partici%C3%B3n-traintest" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>## === PARTICIÓN TRAIN/TEST ===</code></pre>
+<pre><code>## ENTRENAMIENTO:</code></pre>
+<pre><code>##   Período: 1972-07 a 1997-12</code></pre>
+<pre><code>##   Observaciones: 290</code></pre>
+<pre><code>## PRUEBA:</code></pre>
+<pre><code>##   Período: 1998-01 a 1998-12</code></pre>
+<pre><code>##   Observaciones: 12</code></pre>
+</div>
+<div id="ajuste-del-modelo-holt-winters" class="section level2 hasAnchor" number="3.6">
+<h2><span class="header-section-number">3.6</span> Ajuste del Modelo Holt-Winters<a href="preparacion.html#ajuste-del-modelo-holt-winters" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>## === MODELO HOLT-WINTERS AJUSTADO ===</code></pre>
+<pre><code>## Parámetros estimados:</code></pre>
+<pre><code>##   Alpha (nivel): 0.0921</code></pre>
+<pre><code>##   Beta (tendencia): 0.0378</code></pre>
+<pre><code>##   Gamma (estacionalidad): 0.3005</code></pre>
+<pre><code>## Métricas de pronóstico (1998):</code></pre>
+<pre><code>##   MAE: 4.016 mm</code></pre>
+<pre><code>##   RMSE: 4.585 mm</code></pre>
+<pre><code>##   MAPE: 399.27 %</code></pre>
+<pre><code>##   Cobertura IC: 100 %</code></pre>
+</div>
+<div id="ajuste-del-modelo-sarima" class="section level2 hasAnchor" number="3.7">
+<h2><span class="header-section-number">3.7</span> Ajuste del Modelo SARIMA<a href="preparacion.html#ajuste-del-modelo-sarima" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>## === MODELO SARIMA AJUSTADO ===
+## Orden identificado: SARIMA(3,0,0)(1,0,1)[12]</code></pre>
+<pre><code>## Métricas de pronóstico (1998):</code></pre>
+<pre><code>##   MAE: 4.067 mm</code></pre>
+<pre><code>##   RMSE: 5.036 mm</code></pre>
+<pre><code>##   MAPE: 383.01 %</code></pre>
+<pre><code>##   Cobertura IC: 91.7 %</code></pre>
+</div>
+<div id="ajuste-del-modelo-prophet" class="section level2 hasAnchor" number="3.8">
+<h2><span class="header-section-number">3.8</span> Ajuste del Modelo Prophet<a href="preparacion.html#ajuste-del-modelo-prophet" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>## === MODELO PROPHET AJUSTADO ===</code></pre>
+<pre><code>## Configuración:</code></pre>
+<pre><code>##   Estacionalidad anual: Activada (Fourier)</code></pre>
+<pre><code>##   Modo: Aditivo</code></pre>
+<pre><code>##   Changepoints detectados: 25</code></pre>
+<pre><code>## Métricas de pronóstico (1998):</code></pre>
+<pre><code>##   MAE: 4.171 mm</code></pre>
+<pre><code>##   RMSE: 4.81 mm</code></pre>
+<pre><code>##   MAPE: 353.11 %</code></pre>
+<pre><code>##   Cobertura IC: 91.7 %</code></pre>
+</div>
+<div id="resumen-de-objetos-creados" class="section level2 hasAnchor" number="3.9">
+<h2><span class="header-section-number">3.9</span> Resumen de Objetos Creados<a href="preparacion.html#resumen-de-objetos-creados" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Los siguientes objetos están disponibles para los capítulos posteriores:</p>
+<p><strong>Datos:</strong></p>
+<ul>
+<li><code>datos_limpios</code>: Dataframe con todos los datos limpios e interpolados</li>
+<li><code>datos_analisis</code>: Dataframe filtrado (1972-07 a 1999-12)</li>
+<li><code>datos_train</code>: Dataframe de entrenamiento (1972-07 a 1997-12)</li>
+<li><code>datos_test</code>: Dataframe de prueba (1998)</li>
+</ul>
+<p><strong>Series temporales:</strong></p>
+<ul>
+<li><code>ts_mensual</code>: Serie completa (zoo)</li>
+<li><code>ts_analisis</code>: Serie filtrada (zoo)</li>
+<li><code>ts_train</code>: Serie de entrenamiento (zoo)</li>
+<li><code>ts_test</code>: Serie de prueba (zoo)</li>
+<li><code>ts_train_regular</code>: Serie de entrenamiento (ts regular, frequency=12)</li>
+<li><code>ts_test_regular</code>: Serie de prueba (ts regular, frequency=12)</li>
+</ul>
+<p><strong>Modelos:</strong></p>
+<ul>
+<li><code>hw_model</code>: Modelo Holt-Winters ajustado</li>
+<li><code>sarima_model</code>: Modelo SARIMA ajustado</li>
+<li><code>prophet_model</code>: Modelo Prophet ajustado</li>
+</ul>
+<p><strong>Pronósticos:</strong></p>
+<ul>
+<li><code>hw_forecast</code>: Objeto forecast de Holt-Winters</li>
+<li><code>hw_pred</code>, <code>hw_lower</code>, <code>hw_upper</code>: Vectores de pronóstico HW</li>
+<li><code>sarima_forecast</code>: Objeto forecast de SARIMA</li>
+<li><code>sarima_pred</code>, <code>sarima_lower</code>, <code>sarima_upper</code>: Vectores de pronóstico SARIMA</li>
+<li><code>prophet_forecast</code>: Dataframe de pronóstico Prophet</li>
+<li><code>prophet_pred</code>, <code>prophet_lower</code>, <code>prophet_upper</code>: Vectores de pronóstico Prophet</li>
+</ul>
+<p><strong>Componentes de modelos:</strong></p>
+<ul>
+<li><code>hw_fitted</code>: Valores ajustados Holt-Winters</li>
+<li><code>sarima_fitted</code>: Valores ajustados SARIMA</li>
+<li><code>sarima_residuos</code>: Residuos SARIMA</li>
+<li><code>prophet_insample</code>: Predicción in-sample Prophet (con componentes)</li>
+<li><code>prophet_residuos</code>: Residuos Prophet</li>
+<li><code>prophet_trend</code>: Componente de tendencia Prophet</li>
+<li><code>prophet_yearly</code>: Componente estacional Prophet</li>
+</ul>
+<p><strong>Métricas:</strong></p>
+<ul>
+<li><code>MAE_hw</code>, <code>RMSE_hw</code>, <code>MAPE_hw</code>, <code>cobertura_hw</code>: Métricas Holt-Winters</li>
+<li><code>MAE_sarima</code>, <code>RMSE_sarima</code>, <code>MAPE_sarima</code>, <code>cobertura_sarima</code>: Métricas SARIMA</li>
+<li><code>MAE_prophet</code>, <code>RMSE_prophet</code>, <code>MAPE_prophet</code>, <code>cobertura_prophet</code>: Métricas Prophet</li>
+</ul>
+<p><strong>Errores:</strong></p>
+<ul>
+<li><code>hw_errores</code>: Errores de pronóstico Holt-Winters</li>
+<li><code>sarima_errores</code>: Errores de pronóstico SARIMA</li>
+<li><code>prophet_errores</code>: Errores de pronóstico Prophet</li>
+</ul>
+<pre><code>## === PREPARACIÓN COMPLETADA ===</code></pre>
+<pre><code>## Total de objetos creados: 50+</code></pre>
+<pre><code>## 
+## Los capítulos siguientes pueden usar estos objetos directamente</code></pre>
+<pre><code>## sin necesidad de recargar o recalcular datos.</code></pre>
 
+</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="contexto.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="preparacion.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="referencias.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="analisis-exploratorio.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>

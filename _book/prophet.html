@@ -4,18 +4,18 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>2 Referencias | index.knit</title>
+  <title>7 Enfoque de Regresión: Facebook Prophet | index.knit</title>
   <meta name="description" content="" />
   <meta name="generator" content="bookdown 0.45 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="2 Referencias | index.knit" />
+  <meta property="og:title" content="7 Enfoque de Regresión: Facebook Prophet | index.knit" />
   <meta property="og:type" content="book" />
   
   
   
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="2 Referencias | index.knit" />
+  <meta name="twitter:title" content="7 Enfoque de Regresión: Facebook Prophet | index.knit" />
   
   
   
@@ -28,8 +28,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="contexto.html"/>
-<link rel="next" href="preparacion.html"/>
+<link rel="prev" href="sarima.html"/>
+<link rel="next" href="comparacion.html"/>
 <script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
@@ -185,17 +185,133 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="referencias" class="section level1 hasAnchor" number="2">
-<h1><span class="header-section-number">2</span> Referencias<a href="referencias.html#referencias" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<div id="prophet" class="section level1 hasAnchor" number="7">
+<h1><span class="header-section-number">7</span> Enfoque de Regresión: Facebook Prophet<a href="prophet.html#prophet" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>Facebook Prophet representa un enfoque alternativo para el pronóstico de series temporales, basándose en modelos aditivos generalizados (GAM) en lugar de procesos estocásticos. Este paradigma permite interpretar las series temporales desde una perspectiva de <strong>regresión</strong>, donde los componentes (tendencia, estacionalidad, eventos) se modelan como variables predictoras independientes.</p>
+<p><strong>Nota</strong>: Los datos y el modelo Prophet fueron preparados en el Capítulo <a href="preparacion.html#preparacion">3</a>. Los objetos <code>prophet_model</code>, <code>prophet_forecast</code>, <code>prophet_insample</code>, <code>prophet_train</code> y <code>prophet_test_df</code> están disponibles directamente.</p>
+<div id="series-temporales-como-regresión" class="section level2 hasAnchor" number="7.1">
+<h2><span class="header-section-number">7.1</span> Series Temporales como Regresión<a href="prophet.html#series-temporales-como-regresi%C3%B3n" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="paradigma-tradicional-vs.-enfoque-regresivo" class="section level3 hasAnchor" number="7.1.1">
+<h3><span class="header-section-number">7.1.1</span> Paradigma Tradicional vs. Enfoque Regresivo<a href="prophet.html#paradigma-tradicional-vs.-enfoque-regresivo" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p><strong>Modelos estocásticos (ARIMA, Holt-Winters):</strong>
+- Asumen que cada observación depende de observaciones pasadas
+- Modelan la autocorrelación como propiedad fundamental
+- Requieren datos consecutivos sin valores faltantes
+- Dificultan la incorporación de variables externas</p>
+<p><strong>Enfoque de regresión (Prophet):</strong>
+- Descompone la serie en componentes interpretables
+- Cada componente se modela como función del tiempo
+- Permite datos irregulares y valores faltantes
+- Facilita la inclusión de variables exógenas (regresores)</p>
+</div>
+</div>
+<div id="resumen-del-modelo-ajustado-2" class="section level2 hasAnchor" number="7.2">
+<h2><span class="header-section-number">7.2</span> Resumen del Modelo Ajustado<a href="prophet.html#resumen-del-modelo-ajustado-2" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>## === MODELO PROPHET ===</code></pre>
+<pre><code>## Partición de datos:</code></pre>
+<pre><code>##   Entrenamiento: 1972-07 a 1997-12 | n = 290</code></pre>
+<pre><code>##   Prueba: 1998-01 a 1998-12 | n = 12</code></pre>
+<pre><code>## Configuración del modelo:</code></pre>
+<pre><code>##   Modo de estacionalidad: additive</code></pre>
+<pre><code>##   Estacionalidad anual: Activada (Fourier)</code></pre>
+<pre><code>##   Changepoint prior scale: 0.05</code></pre>
+<pre><code>##   Seasonality prior scale: 10</code></pre>
+<pre><code>##   Changepoints detectados: 25</code></pre>
+<pre><code>## Métricas de pronóstico (1998):</code></pre>
+<pre><code>##   MAE: 4.171 mm</code></pre>
+<pre><code>##   RMSE: 4.81 mm</code></pre>
+<pre><code>##   MAPE: 353.11 %</code></pre>
+<pre><code>##   Cobertura IC: 91.7 %</code></pre>
+</div>
+<div id="extracción-y-visualización-de-componentes" class="section level2 hasAnchor" number="7.3">
+<h2><span class="header-section-number">7.3</span> Extracción y Visualización de Componentes<a href="prophet.html#extracci%C3%B3n-y-visualizaci%C3%B3n-de-componentes" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p><img src="index_files/figure-html/componentes-prophet-1.png" width="1152" /></p>
+<p><img src="index_files/figure-html/analisis-componentes-1.png" width="1152" /></p>
+<pre><code>## 
+## === INTERPRETACIÓN DEL PATRÓN ESTACIONAL ===</code></pre>
+<pre><code>## El patrón bimodal se confirma:</code></pre>
+<pre><code>##   • Pico primario: Apr</code></pre>
+<pre><code>##   • Efecto máximo: 5.11 mm</code></pre>
+<pre><code>## Meses con efecto negativo (temporada seca):</code></pre>
+<pre><code>## # A tibble: 7 × 2
+##     Mes Efecto_Estacional
+##   &lt;dbl&gt;             &lt;dbl&gt;
+## 1     1            -2.49 
+## 2     2            -1.46 
+## 3     6            -1.94 
+## 4     7            -4.14 
+## 5     8            -3.62 
+## 6     9            -0.435
+## 7    12            -1.38</code></pre>
+</div>
+<div id="análisis-comparativo-serie-original-vs.-valores-ajustados-1" class="section level2 hasAnchor" number="7.4">
+<h2><span class="header-section-number">7.4</span> Análisis Comparativo: Serie Original vs. Valores Ajustados<a href="prophet.html#an%C3%A1lisis-comparativo-serie-original-vs.-valores-ajustados-1" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p><img src="index_files/figure-html/comparacion-original-fitted-prophet-1.png" width="1152" /></p>
+<pre><code>## 
+## === CALIDAD DEL AJUSTE (IN-SAMPLE) ===</code></pre>
+<pre><code>## Correlación (r): 0.6184</code></pre>
+<pre><code>## R² (coef. determinación): 0.3824</code></pre>
+<pre><code>##   → El modelo explica el 38.24 % de la varianza</code></pre>
+<pre><code>## MSE (Error Cuadrático Medio): 14.815 mm²</code></pre>
+<pre><code>## RMSE (Raíz del MSE): 3.849 mm</code></pre>
+<pre><code>## Interpretación:</code></pre>
+<pre><code>##   • Las discrepancias entre valores originales y ajustados representan</code></pre>
+<pre><code>##     el componente irregular (residuos) que Prophet no captura.</code></pre>
+<pre><code>##   • Un buen ajuste implica que estos residuos sean ruido blanco.</code></pre>
+<pre><code>##   • Prophet descompone la serie en tendencia + estacionalidad + residuos,</code></pre>
+<pre><code>##     siguiendo el paradigma de regresión GAM.</code></pre>
+</div>
+<div id="pronóstico-para-1998-1" class="section level2 hasAnchor" number="7.5">
+<h2><span class="header-section-number">7.5</span> Pronóstico para 1998<a href="prophet.html#pron%C3%B3stico-para-1998-1" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p><img src="index_files/figure-html/pronostico-prophet-1.png" width="1152" /></p>
+</div>
+<div id="evaluación-del-desempeño" class="section level2 hasAnchor" number="7.6">
+<h2><span class="header-section-number">7.6</span> Evaluación del Desempeño<a href="prophet.html#evaluaci%C3%B3n-del-desempe%C3%B1o" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>## === MÉTRICAS DE DESEMPEÑO DEL PRONÓSTICO PROPHET ===</code></pre>
+<pre><code>## Error Absoluto Medio (MAE): 4.171 mm</code></pre>
+<pre><code>## Raíz del Error Cuadrático Medio (RMSE): 4.81 mm</code></pre>
+<pre><code>## Error Porcentual Absoluto Medio (MAPE): 353.11 %</code></pre>
+<pre><code>## Cobertura del intervalo de confianza (95%): 100 %</code></pre>
+<pre><code>##   Observaciones dentro del IC: 12 de 12</code></pre>
+<pre><code>## Test de Shapiro-Wilk (normalidad de errores):</code></pre>
+<pre><code>##   Estadístico W: 0.935</code></pre>
+<pre><code>##   P-valor: 0.4358</code></pre>
+<pre><code>##   Conclusión: Los errores siguen distribución normal (p &gt; 0.05)</code></pre>
+<pre><code>## 
+## === ESTADÍSTICAS DE ERRORES ===</code></pre>
+<pre><code>## Media de errores: 1.7782 mm</code></pre>
+<pre><code>##   (Sesgo: valor cercano a 0 indica predicciones no sesgadas)</code></pre>
+<pre><code>## Desviación estándar: 4.668 mm</code></pre>
+<pre><code>## Error mínimo: -6.431 mm</code></pre>
+<pre><code>## Error máximo: 7.552 mm</code></pre>
+</div>
+<div id="diagnóstico-de-residuos-1" class="section level2 hasAnchor" number="7.7">
+<h2><span class="header-section-number">7.7</span> Diagnóstico de Residuos<a href="prophet.html#diagn%C3%B3stico-de-residuos-1" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p><img src="index_files/figure-html/diagnostico-residuos-prophet-1.png" width="1152" /></p>
+<pre><code>## 
+## === ESTADÍSTICAS DE RESIDUOS ===</code></pre>
+<pre><code>## Media: 0.0031 mm</code></pre>
+<pre><code>## Desviación estándar: 3.856 mm</code></pre>
+<pre><code>## Mínimo: -8.518 mm</code></pre>
+<pre><code>## Máximo: 12.826 mm</code></pre>
+<pre><code>## 
+## Test de Shapiro-Wilk:</code></pre>
+<pre><code>##   P-valor: 2e-04</code></pre>
+<pre><code>##   Conclusión: Residuos NO normales (p &lt; 0.05)</code></pre>
+</div>
+<div id="diagnóstico-de-errores-de-pronóstico-1" class="section level2 hasAnchor" number="7.8">
+<h2><span class="header-section-number">7.8</span> Diagnóstico de Errores de Pronóstico<a href="prophet.html#diagn%C3%B3stico-de-errores-de-pron%C3%B3stico-1" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p><img src="index_files/figure-html/diagnostico-errores-prophet-1.png" width="1152" /></p>
 
+</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="contexto.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="preparacion.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="sarima.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="comparacion.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>

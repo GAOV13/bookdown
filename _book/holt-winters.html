@@ -4,18 +4,18 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>2 Referencias | index.knit</title>
+  <title>5 Suavizamiento Exponencial: Método Holt-Winters | index.knit</title>
   <meta name="description" content="" />
   <meta name="generator" content="bookdown 0.45 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="2 Referencias | index.knit" />
+  <meta property="og:title" content="5 Suavizamiento Exponencial: Método Holt-Winters | index.knit" />
   <meta property="og:type" content="book" />
   
   
   
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="2 Referencias | index.knit" />
+  <meta name="twitter:title" content="5 Suavizamiento Exponencial: Método Holt-Winters | index.knit" />
   
   
   
@@ -28,8 +28,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="contexto.html"/>
-<link rel="next" href="preparacion.html"/>
+<link rel="prev" href="analisis-exploratorio.html"/>
+<link rel="next" href="sarima.html"/>
 <script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
@@ -185,17 +185,99 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="referencias" class="section level1 hasAnchor" number="2">
-<h1><span class="header-section-number">2</span> Referencias<a href="referencias.html#referencias" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<div id="holt-winters" class="section level1 hasAnchor" number="5">
+<h1><span class="header-section-number">5</span> Suavizamiento Exponencial: Método Holt-Winters<a href="holt-winters.html#holt-winters" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>El método de Holt-Winters es una técnica de suavizamiento exponencial que captura tres componentes de una serie temporal: nivel, tendencia y estacionalidad. A diferencia de los promedios móviles simples, este método asigna pesos exponencialmente decrecientes a las observaciones pasadas, dando mayor importancia a los datos más recientes.</p>
+<p><strong>Nota</strong>: Los datos y el modelo Holt-Winters fueron preparados en el Capítulo <a href="preparacion.html#preparacion">3</a>. Los objetos <code>hw_model</code>, <code>hw_forecast</code>, <code>ts_train</code>, <code>ts_test</code> y las métricas están disponibles directamente.</p>
+<div id="resumen-del-modelo-ajustado" class="section level2 hasAnchor" number="5.1">
+<h2><span class="header-section-number">5.1</span> Resumen del Modelo Ajustado<a href="holt-winters.html#resumen-del-modelo-ajustado" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>## === MODELO HOLT-WINTERS ===</code></pre>
+<pre><code>## Partición de datos:</code></pre>
+<pre><code>##   Entrenamiento: 1972-07 a 1997-12 | n = 290</code></pre>
+<pre><code>##   Prueba: 1998-01 a 1998-12 | n = 12</code></pre>
+<pre><code>## Métricas de pronóstico (1998):</code></pre>
+<pre><code>##   MAE: 4.016 mm</code></pre>
+<pre><code>##   RMSE: 4.585 mm</code></pre>
+<pre><code>##   MAPE: 399.27 %</code></pre>
+<pre><code>##   Cobertura IC: 100 %</code></pre>
+</div>
+<div id="modelo-holt-winters-aditivo" class="section level2 hasAnchor" number="5.2">
+<h2><span class="header-section-number">5.2</span> Modelo Holt-Winters Aditivo<a href="holt-winters.html#modelo-holt-winters-aditivo" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Dado que la amplitud de las fluctuaciones estacionales se mantiene relativamente constante (evidencia de la descomposición STL en el capítulo anterior), utilizamos el modelo aditivo de Holt-Winters.</p>
+<pre><code>## === PARÁMETROS DEL MODELO HOLT-WINTERS ===</code></pre>
+<pre><code>## Parámetros de suavizamiento estimados:</code></pre>
+<pre><code>##   Alpha (nivel): 0.0921</code></pre>
+<pre><code>##   Beta (tendencia): 0.0378</code></pre>
+<pre><code>##   Gamma (estacionalidad): 0.3005</code></pre>
+<pre><code>## Interpretación:</code></pre>
+<pre><code>##   • Alpha alto indica que el nivel se ajusta rápidamente a nuevas observaciones</code></pre>
+<pre><code>##   • Beta bajo sugiere que la tendencia cambia lentamente</code></pre>
+<pre><code>##   • Gamma alto implica que el patrón estacional se actualiza con cada ciclo</code></pre>
+</div>
+<div id="análisis-comparativo-serie-original-vs.-suavizado" class="section level2 hasAnchor" number="5.3">
+<h2><span class="header-section-number">5.3</span> Análisis Comparativo: Serie Original vs. Suavizado<a href="holt-winters.html#an%C3%A1lisis-comparativo-serie-original-vs.-suavizado" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p><img src="index_files/figure-html/comparacion-original-suavizado-1.png" width="1152" /></p>
+<p><strong>Interpretación del suavizado:</strong></p>
+<ul>
+<li><p><strong>Reducción de ruido</strong>: El suavizado Holt-Winters elimina fluctuaciones aleatorias de corto plazo, revelando el patrón subyacente de la serie.</p></li>
+<li><p><strong>Preservación de estacionalidad</strong>: A diferencia de los promedios móviles simples, Holt-Winters mantiene la estructura estacional bimodal característica de la precipitación en Cali.</p></li>
+<li><p><strong>Captura de tendencia local</strong>: Aunque la serie global es estacionaria, el modelo puede capturar cambios graduales en el nivel durante períodos específicos.</p></li>
+<li><p><strong>Retardo mínimo</strong>: El método de suavizamiento exponencial tiene menor retardo que los promedios móviles, siguiendo más cercanamente los cambios en la serie.</p></li>
+</ul>
+</div>
+<div id="descomposición-de-la-serie-suavizada" class="section level2 hasAnchor" number="5.4">
+<h2><span class="header-section-number">5.4</span> Descomposición de la Serie Suavizada<a href="holt-winters.html#descomposici%C3%B3n-de-la-serie-suavizada" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p><img src="index_files/figure-html/decompose-suavizado-1.png" width="1152" /></p>
+<p><strong>Comparación de componentes:</strong></p>
+<p><img src="index_files/figure-html/comparar-componentes-1.png" width="1152" /></p>
+<pre><code>## 
+## === ANÁLISIS DE COMPONENTES ===</code></pre>
+<pre><code>## TENDENCIA:</code></pre>
+<pre><code>##   Original - Rango: 4.73 9.94</code></pre>
+<pre><code>##   Suavizada - Rango: 5.09 11.35</code></pre>
+<pre><code>## ESTACIONALIDAD:</code></pre>
+<pre><code>##   Original - Amplitud: 4.55 mm</code></pre>
+<pre><code>##   Suavizada - Amplitud: 3.61 mm</code></pre>
+<pre><code>## RESIDUOS:</code></pre>
+<pre><code>##   Original - Desv. Est.: 4.51 mm</code></pre>
+<pre><code>##   Suavizada - Desv. Est.: 2.6 mm</code></pre>
+<pre><code>##   Reducción de variabilidad: 42.3 %</code></pre>
+</div>
+<div id="pronóstico-para-el-período-de-prueba" class="section level2 hasAnchor" number="5.5">
+<h2><span class="header-section-number">5.5</span> Pronóstico para el Período de Prueba<a href="holt-winters.html#pron%C3%B3stico-para-el-per%C3%ADodo-de-prueba" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Utilizamos el modelo ajustado para predecir el período de prueba disponible y comparamos con los valores observados.</p>
+<pre><code>## === INFORMACIÓN DEL PRONÓSTICO ===</code></pre>
+<pre><code>## Período de pronóstico: 1998-01 a 1998-12</code></pre>
+<pre><code>## Número de observaciones: 12</code></pre>
+<p><img src="index_files/figure-html/pronostico-hw-1.png" width="1152" /></p>
+</div>
+<div id="evaluación-del-desempeño-del-modelo" class="section level2 hasAnchor" number="5.6">
+<h2><span class="header-section-number">5.6</span> Evaluación del Desempeño del Modelo<a href="holt-winters.html#evaluaci%C3%B3n-del-desempe%C3%B1o-del-modelo" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>## === MÉTRICAS DE DESEMPEÑO DEL PRONÓSTICO ===</code></pre>
+<pre><code>## Error Absoluto Medio (MAE): 4.016 mm</code></pre>
+<pre><code>## Raíz del Error Cuadrático Medio (RMSE): 4.585 mm</code></pre>
+<pre><code>## Error Porcentual Absoluto Medio (MAPE): Inf %</code></pre>
+<pre><code>## Precisión del modelo: -Inf %</code></pre>
+<pre><code>## Cobertura del intervalo de confianza (95%): 100 %</code></pre>
+<pre><code>##   Observaciones dentro del IC: 12 de 12</code></pre>
+<pre><code>## Test de Shapiro-Wilk (normalidad de residuos):</code></pre>
+<pre><code>##   Estadístico W: 0.9379</code></pre>
+<pre><code>##   P-valor: 0.4715</code></pre>
+<pre><code>##   Conclusión: Los residuos siguen distribución normal (p &gt; 0.05)</code></pre>
+</div>
+<div id="análisis-de-residuos-del-pronóstico" class="section level2 hasAnchor" number="5.7">
+<h2><span class="header-section-number">5.7</span> Análisis de Residuos del Pronóstico<a href="holt-winters.html#an%C3%A1lisis-de-residuos-del-pron%C3%B3stico" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p><img src="index_files/figure-html/analisis-residuos-forecast-1.png" width="1152" /></p>
 
+</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="contexto.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="preparacion.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="analisis-exploratorio.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="sarima.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
