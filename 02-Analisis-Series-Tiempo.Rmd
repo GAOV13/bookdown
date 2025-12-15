@@ -1,0 +1,155 @@
+# Análisis Exploratorio de Series de Tiempo {#analisis-exploratorio}
+
+En este capítulo se presenta el análisis exploratorio de los datos de precipitación para Cali, Colombia, obtenidos de la estación meteorológica CALI ALFONSO BONILL (NASA/NOAA). El análisis incluye la visualización de series temporales, identificación de rezagos (lags), cálculo de promedios móviles y detección de estacionalidad.
+
+## Carga y Preparación de Datos
+
+```{r setup-datos, message=FALSE, warning=FALSE}
+# Cargar librerías necesarias
+library(tidyverse)
+library(lubridate)
+library(forecast)
+library(zoo)
+library(gridExtra)
+
+# Leer datos
+datos <- read_csv("Data/Excel/monthly_precipitation.csv")
+
+# Preparar datos
+datos_limpios <- datos %>%
+  mutate(
+    DATE = ym(DATE),
+    # Convertir precipitación (ya está en mm x 10, dividir por 10)
+    PRCP = PRCP / 10,
+    # Convertir temperaturas de décimas de grado a grados
+    TMAX = TMAX / 10,
+    TMIN = TMIN / 10,
+    TAVG = TAVG / 10
+  )
+
+# Información ANTES de la interpolación
+cat("=== INFORMACIÓN ANTES DE INTERPOLACIÓN ===\n")
+cat("Total de observaciones:", nrow(datos_limpios), "\n")
+cat("Valores faltantes en PRCP:", sum(is.na(datos_limpios$PRCP)), "\n")
+cat("Porcentaje de NAs:", round(100 * sum(is.na(datos_limpios$PRCP)) / nrow(datos_limpios), 2), "%\n\n")
+
+# Interpolación de valores faltantes usando spline cúbico
+# Crear índice numérico para la interpolación
+datos_limpios <- datos_limpios %>%
+  mutate(indice = row_number())
+
+# Identificar posiciones con datos válidos
+indices_validos <- which(!is.na(datos_limpios$PRCP))
+valores_validos <- datos_limpios$PRCP[indices_validos]
+
+# Aplicar interpolación usando na.approx de zoo (interpolación lineal más conservadora)
+if(length(indices_validos) >= 2) {
+  # Usar na.approx para interpolación lineal (más conservadora que spline)
+  # maxgap limita cuántos NAs consecutivos se interpolan
+  datos_limpios$PRCP <- na.approx(datos_limpios$PRCP, maxgap = 3, na.rm = FALSE)
+  
+  # Si aún quedan NAs al inicio o final, usar na.locf (last observation carried forward/backward)
+  datos_limpios$PRCP <- na.locf(datos_limpios$PRCP, na.rm = FALSE, fromLast = FALSE)
+  datos_limpios$PRCP <- na.locf(datos_limpios$PRCP, na.rm = FALSE, fromLast = TRUE)
+  
+  # Asegurar que no haya valores negativos (la precipitación no puede ser negativa)
+  datos_limpios <- datos_limpios %>%
+    mutate(PRCP = pmax(PRCP, 0))
+  
+  cat("=== INFORMACIÓN DESPUÉS DE INTERPOLACIÓN ===\n")
+  cat("Valores faltantes restantes:", sum(is.na(datos_limpios$PRCP)), "\n")
+  
+  # Mostrar estadísticas para detectar valores anómalos
+  cat("\nEstadísticas de precipitación:\n")
+  cat("  Máximo:", round(max(datos_limpios$PRCP, na.rm = TRUE), 2), "mm\n")
+  cat("  Percentil 99:", round(quantile(datos_limpios$PRCP, 0.99, na.rm = TRUE), 2), "mm\n")
+  
+} else {
+  cat("ADVERTENCIA: No hay suficientes datos válidos para interpolación.\n")
+}
+
+cat("Precipitación promedio:", round(mean(datos_limpios$PRCP, na.rm = TRUE), 2), "mm\n")
+```
+
+```{r crear-serie-temporal}
+# Crear serie temporal usando zoo (maneja mejor valores faltantes y fechas irregulares)
+ts_mensual <- zoo(datos_limpios$PRCP, order.by = datos_limpios$DATE)
+
+cat("Datos mensuales:", nrow(datos_limpios), "meses\n")
+cat("Rango temporal:", min(year(datos_limpios$DATE)), "-", max(year(datos_limpios$DATE)), "\n")
+```
+
+## Visualización de Series Temporales
+
+### Serie Temporal de Precipitación Mensual
+
+```{r plot-serie-mensual, fig.width=10, fig.height=6}
+# Graficar usando el objeto zoo ts_mensual
+autoplot(ts_mensual) +
+  labs(
+    title = "Serie Temporal de Precipitación Mensual Total - Cali",
+    subtitle = "Con tendencia suavizada (LOESS)",
+    x = "Fecha",
+    y = "Precipitación Total Mensual (mm)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray40")
+  )
+```
+
+Observando la serie completa, se identifican períodos con datos faltantes o inconsistentes, particularmente antes de 1972 y después de 1999. Para el análisis subsecuente, se trabajará con el período **1972-07 a 1999-12**, que presenta la mayor continuidad y calidad de datos.
+
+```{r filtrar-periodo-analisis}
+# Filtrar período con mayor calidad de datos desde el objeto zoo
+ts_analisis <- window(ts_mensual, start = as.Date("1972-07-01"), end = as.Date("1999-12-01"))
+
+# Crear dataframe correspondiente
+datos_analisis <- datos_limpios %>%
+  filter(DATE >= ym("1972-07") & DATE <= ym("1999-12"))
+
+cat("Período de análisis seleccionado:\n")
+cat("  Desde:", format(min(datos_analisis$DATE), "%Y-%m"), "\n")
+cat("  Hasta:", format(max(datos_analisis$DATE), "%Y-%m"), "\n")
+cat("  Total de meses:", nrow(datos_analisis), "\n")
+cat("  Valores faltantes:", sum(is.na(datos_analisis$PRCP)), "\n")
+```
+
+```{r grafica-periodo-analisis, fig.width=10, fig.height=6}
+# Graficar usando el objeto zoo ts_analisis
+autoplot(ts_analisis) +
+  labs(
+    title = "Serie Temporal de Precipitación Mensual - Período Seleccionado (1972-1999)",
+    subtitle = "Serie filtrada para análisis",
+    x = "Fecha",
+    y = "Precipitación Total Mensual (mm)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray40")
+  )
+```
+
+## Análisis de Autocorrelación y Rezagos
+
+### Gráficos de Lag (Rezagos)
+
+Los gráficos de lag permiten identificar si existe correlación entre los valores de la serie y sus valores pasados (rezagados). Si hay una relación clara, indica que valores pasados pueden ayudar a predecir valores futuros.
+
+```{r lag-plots, fig.width=12, fig.height=10}
+# Gráfico de lags múltiples usando la serie zoo
+lag.plot(coredata(ts_analisis), lags = 12, do.lines = FALSE, 
+         main = "Gráficos de Lag - Precipitación Mensual",
+         col = "steelblue", pch = 20)
+```
+
+**Análisis de los gráficos de lag:**
+
+Observando los 12 gráficos de rezago, se pueden identificar las siguientes características:
+
+- **Lags 1-11**: Los puntos se distribuyen de forma mayormente aleatoria sin mostrar una tendencia lineal clara. Esto indica **baja autocorrelación de corto y mediano plazo**, lo que significa que el valor de precipitación en un mes tiene poca relación con los meses inmediatamente anteriores.
+
+- **Lag 12**: Aunque se observa una ligera estructura en la nube de puntos, la correlación sigue siendo débil. Esto sugiere que existe un **patrón estacional anual**, pero la variabilidad dentro de cada mes es alta.
+
