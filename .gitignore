@@ -8,6 +8,8 @@ _bookdown_files/
 # RMarkdown/knitr cache and temporary files
 *_cache/
 *_files/
+# Excepto archivos en docs/ (necesarios para GitHub Pages)
+!docs/**/*_files/
 .Rproj.user/
 .Rhistory
 .RData
