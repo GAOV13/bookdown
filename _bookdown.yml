@@ -1,4 +1,14 @@
 book_filename: "index"  # Nombre del archivo principal
 output_dir: "_book"     # Carpeta de salida del libro
-delete_merged_files: true
+delete_merged_file: false
 github_repo: "GAOV13/bookdown"  # Nombre del repositorio en GitHub
+
+rmd_files: 
+  - "index.Rmd"
+  - "01-Intro.Rmd"
+  - "00-Preparacion-Datos.Rmd"
+  - "02-Analisis-Series-Tiempo.Rmd"
+  - "03-Holt-Winters.Rmd"
+  - "04-SARIMA.Rmd"
+  - "05-Prophet.Rmd"
+  - "06-Comparacion-Modelos.Rmd"
