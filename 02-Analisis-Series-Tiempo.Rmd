@@ -132,6 +132,115 @@ autoplot(ts_analisis) +
   )
 ```
 
+### Visualización por Años
+
+Este gráfico muestra los 12 meses de cada año superpuestos, permitiendo comparar patrones estacionales entre diferentes años.
+
+```{r grafica-anos-superpuestos, fig.width=12, fig.height=8}
+# Preparar datos para gráfico por años
+datos_por_ano <- datos_analisis %>%
+  mutate(
+    Año = year(DATE),
+    Mes = month(DATE)
+  )
+
+# Gráfico con todos los años superpuestos
+ggplot(datos_por_ano, aes(x = Mes, y = PRCP, group = Año, color = Año)) +
+  geom_line(alpha = 0.5, linewidth = 0.8) +
+  scale_x_continuous(breaks = 1:12, labels = month.abb) +
+  scale_color_viridis_c(option = "plasma") +
+  labs(
+    title = "Patrón Estacional de Precipitación por Año",
+    subtitle = "Cada línea representa un año completo (1972-1999)",
+    x = "Mes",
+    y = "Precipitación (mm)",
+    color = "Año"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+**Análisis del patrón anual:**
+
+- Cada línea representa el ciclo anual completo de precipitación para un año específico
+- Los colores indican diferentes años (amarillo = años recientes, morado = años antiguos)
+- La variabilidad entre años muestra la alta variabilidad interanual característica del clima tropical
+- Se pueden identificar años particularmente secos o húmedos por la posición de sus líneas
+
+**Identificación de estacionalidad:**
+
+Del gráfico se observa un patrón estacional característico del régimen de precipitación en Cali:
+
+- **Período húmedo 1 (marzo-junio)**: Se identifica un aumento considerable de la precipitación que alcanza su máximo entre abril y mayo, seguido de una disminución progresiva hacia junio. Este período corresponde a la primera temporada de lluvias.
+
+- **Período seco intermedio (julio-agosto)**: Los meses de julio y agosto presentan consistentemente precipitaciones bajas, configurando una estación seca intermedia.
+
+- **Período húmedo 2 (septiembre-diciembre)**: Se observa un segundo aumento de precipitación que comienza en septiembre, alcanza su máximo entre octubre y noviembre, para luego disminuir en diciembre.
+
+- **Período seco principal (enero-febrero)**: Los primeros meses del año mantienen precipitaciones bajas, constituyendo la estación seca principal.
+
+Este patrón evidencia una **estacionalidad bimodal** característica del clima tropical de la región andina colombiana, con dos temporadas de lluvias y dos temporadas secas bien diferenciadas a lo largo del año. La alta superposición de las líneas en ciertos meses (especialmente en los períodos húmedos) confirma la consistencia del patrón estacional, aunque con variabilidad interanual significativa en la magnitud de las precipitaciones.
+
+### Visualización de Patrones Normalizados por Año
+
+Para analizar el comportamiento estacional sin la influencia de la magnitud de precipitación de cada año (años secos vs. húmedos), normalizamos los datos de cada año entre 0 y 1. Esto permite identificar si el patrón temporal de distribución de lluvias es consistente independientemente de la cantidad total anual.
+
+```{r grafica-anos-normalizados, fig.width=12, fig.height=8}
+# Normalizar datos por año (min-max normalization)
+datos_normalizados <- datos_por_ano %>%
+  group_by(Año) %>%
+  mutate(
+    PRCP_norm = (PRCP - min(PRCP, na.rm = TRUE)) / 
+                (max(PRCP, na.rm = TRUE) - min(PRCP, na.rm = TRUE))
+  ) %>%
+  ungroup()
+
+# Gráfico con datos normalizados
+ggplot(datos_normalizados, aes(x = Mes, y = PRCP_norm, group = Año, color = Año)) +
+  geom_line(alpha = 0.5, linewidth = 0.8) +
+  scale_x_continuous(breaks = 1:12, labels = month.abb) +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
+  scale_color_viridis_c(option = "plasma") +
+  labs(
+    title = "Patrón Estacional Normalizado de Precipitación",
+    subtitle = "Datos escalados entre 0 y 1 por año (independiente de magnitud total)",
+    x = "Mes",
+    y = "Precipitación Normalizada (0-1)",
+    color = "Año"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+**Análisis del patrón normalizado:**
+
+Este gráfico revela información crucial sobre la **consistencia del comportamiento estacional**:
+
+- **Convergencia de patrones**: Al eliminar el efecto de la magnitud absoluta, se observa una notable **convergencia** de las trayectorias anuales, lo que confirma que la distribución temporal de las lluvias sigue un patrón muy consistente año tras año.
+
+- **Identificación clara de períodos**:
+  - **Máximos consistentes**: Los picos normalizados ocurren sistemáticamente en abril-mayo (primer máximo) y octubre-noviembre (segundo máximo), confirmando la estacionalidad bimodal.
+  - **Mínimos consistentes**: Los valores más bajos se concentran en enero-febrero y julio-agosto, independientemente de si el año fue húmedo o seco.
+
+- **Variabilidad reducida**: La dispersión entre años es significativamente menor en escala normalizada, lo que indica que las **diferencias entre años se deben principalmente a la magnitud total de precipitación**, no a cambios en el patrón temporal de distribución.
+
+- **Implicaciones para modelado**: Esta consistencia sugiere que:
+  - Un modelo estacional con componentes fijas puede capturar adecuadamente el patrón
+  - La variabilidad interanual afecta principalmente la amplitud, no la fase del ciclo estacional
+  - Los componentes estacionales del modelo SARIMA serán robustos y predecibles
+
+**Comparación con datos absolutos:**
+
+Mientras que el gráfico con valores absolutos muestra **cuánto llovió**, el gráfico normalizado muestra **cuándo llovió** en relación con el resto del año. Esta visualización confirma que el **calendario de lluvias es predecible**, aunque la intensidad varíe entre años.
+
 ## Análisis de Autocorrelación y Rezagos
 
 ### Gráficos de Lag (Rezagos)
@@ -153,3 +262,188 @@ Observando los 12 gráficos de rezago, se pueden identificar las siguientes cara
 
 - **Lag 12**: Aunque se observa una ligera estructura en la nube de puntos, la correlación sigue siendo débil. Esto sugiere que existe un **patrón estacional anual**, pero la variabilidad dentro de cada mes es alta.
 
+- **Autocorrelación**: Qué tan relacionado está el valor actual con valores pasados. En este caso, la baja autocorrelación indica que la precipitación es **altamente variable mes a mes**, incluso dentro de la misma época del año.
+
+
+## Prueba de Estacionariedad
+
+La estacionariedad es un requisito fundamental para muchos modelos de pronóstico de series temporales (como ARIMA). Una serie es estacionaria cuando sus propiedades estadísticas (media, varianza) no cambian con el tiempo.
+
+### Test de Dickey-Fuller Aumentado (ADF)
+
+El test ADF es una prueba estadística para determinar si una serie temporal es estacionaria. 
+
+- **Hipótesis nula (H₀)**: La serie tiene raíz unitaria (NO es estacionaria)
+- **Hipótesis alternativa (H₁)**: La serie es estacionaria
+- **Criterio de decisión**: Si p-valor < 0.05, rechazamos H₀ y concluimos que la serie ES estacionaria
+
+```{r test-adf-original, message=FALSE, warning=FALSE}
+library(tseries)
+
+# Test de Dickey-Fuller en la serie original
+adf_original <- adf.test(coredata(ts_analisis), alternative = "stationary")
+
+cat("=== TEST DE DICKEY-FULLER AUMENTADO ===\n")
+cat("Serie: Precipitación mensual (original)\n\n")
+cat("Estadístico ADF:", round(adf_original$statistic, 4), "\n")
+cat("P-valor:", round(adf_original$p.value, 4), "\n\n")
+
+if(adf_original$p.value < 0.05) {
+  cat("CONCLUSIÓN: La serie ES ESTACIONARIA (p < 0.05)\n")
+  cat("No es necesaria la diferenciación.\n")
+} else {
+  cat("CONCLUSIÓN: La serie NO ES ESTACIONARIA (p >= 0.05)\n")
+  cat("Se requiere diferenciación para modelado ARIMA.\n")
+}
+```
+
+**Explicación: ¿Por qué no fue necesaria la diferenciación?**
+
+La diferenciación es una transformación matemática que se aplica a series temporales **no estacionarias** para remover tendencias o cambios sistemáticos en la media a lo largo del tiempo. En el caso de nuestra serie de precipitación mensual, el análisis reveló que **la diferenciación no es necesaria** por las siguientes razones:
+
+**Evidencia estadística:**
+
+1. **Test ADF concluyente**: El test de Dickey-Fuller Aumentado rechaza la hipótesis nula de raíz unitaria (p-valor < 0.05), confirmando que la serie ya es estacionaria en su forma original.
+
+2. **Ausencia de tendencia**: La descomposición STL mostró que no existe una tendencia de largo plazo creciente o decreciente. El componente de tendencia fluctúa alrededor de un nivel constante.
+
+3. **Media constante**: El promedio móvil de 12 meses (MA(12)) confirmó que la serie oscila alrededor de un nivel estable (~8-10 mm mensuales) sin cambios sistemáticos.
+
+4. **Varianza estable**: La amplitud de las oscilaciones se mantiene relativamente constante a lo largo del período analizado, sin evidencia de heteroscedasticidad.
+
+**Consecuencias de diferenciar innecesariamente:**
+
+Si aplicáramos diferenciación a una serie que **ya es estacionaria**, incurriríamos en los siguientes problemas:
+
+- **Sobrediferenciación**: Introduciríamos autocorrelación negativa artificial en lag 1
+- **Pérdida de interpretabilidad**: Los coeficientes del modelo dejarían de representar relaciones directas con la precipitación
+- **Mayor error de pronóstico**: La varianza del error aumentaría innecesariamente
+- **Complejidad sin beneficio**: El modelo sería más difícil de ajustar y validar sin mejora en el desempeño
+
+**Implicación para el modelado:**
+
+Dado que la serie es estacionaria en su forma original, podemos proceder directamente con modelos de la familia ARMA o SARIMA con **d = 0** (sin diferenciación regular):
+
+- Modelos candidatos: ARMA(p,q) o SARIMA(p,0,q)(P,D,Q)[12]
+- La componente estacional bimodal puede manejarse con la parte estacional del SARIMA
+- Los coeficientes del modelo se interpretarán directamente sobre los valores de precipitación en milímetros
+
+### Análisis ACF y PACF de la Serie Original
+
+Dado que la serie es estacionaria, analizamos directamente los correlogramas para identificar posibles componentes AR y MA del modelo.
+
+```{r acf-pacf-original, fig.width=12, fig.height=6}
+par(mfrow = c(1, 2))
+
+# ACF - Usar coredata() para extraer valores numéricos del objeto zoo
+acf(coredata(ts_analisis), lag.max = 36, na.action = na.omit,
+    main = "ACF - Serie Original (Estacionaria)",
+    col = "darkblue", lwd = 2)
+
+# PACF - Usar coredata() para extraer valores numéricos del objeto zoo
+pacf(coredata(ts_analisis), lag.max = 36, na.action = na.omit,
+     main = "PACF - Serie Original (Estacionaria)",
+     col = "darkred", lwd = 2)
+
+par(mfrow = c(1, 1))
+
+cat("\n=== INTERPRETACIÓN ACF/PACF ===\n")
+cat("Los gráficos ACF y PACF de la serie estacionaria ayudan a:\n")
+cat("  1. Confirmar la estacionariedad (valores dentro de bandas de confianza)\n")
+cat("  2. Identificar el orden MA (q) desde el ACF\n")
+cat("  3. Identificar el orden AR (p) desde el PACF\n")
+cat("  4. Detectar estacionalidad (picos significativos en múltiplos de 12)\n")
+```
+
+## Análisis de Promedios Móviles
+
+Los promedios móviles (MA - Moving Averages) son una técnica de suavizado que ayuda a identificar tendencias y patrones subyacentes al reducir el ruido de las fluctuaciones de corto plazo. Calculamos promedios móviles de diferentes órdenes para visualizar patrones a distintas escalas temporales.
+
+### Promedios Móviles de Diferentes Órdenes
+
+```{r promedios-moviles, fig.width=12, fig.height=8}
+library(zoo)
+
+# Calcular promedios móviles de diferentes órdenes
+ma3 <- rollmean(ts_analisis, k = 3, fill = NA, align = "center")
+ma6 <- rollmean(ts_analisis, k = 6, fill = NA, align = "center")
+ma12 <- rollmean(ts_analisis, k = 12, fill = NA, align = "center")
+
+# Crear dataframe para visualización
+datos_ma <- data.frame(
+  Fecha = index(ts_analisis),
+  Original = coredata(ts_analisis),
+  MA3 = coredata(ma3),
+  MA6 = coredata(ma6),
+  MA12 = coredata(ma12)
+)
+
+# Gráfico de promedios móviles
+ggplot(datos_ma, aes(x = Fecha)) +
+  geom_line(aes(y = Original, color = "Serie Original"), alpha = 0.3, linewidth = 0.5) +
+  geom_line(aes(y = MA3, color = "MA(3)"), linewidth = 0.8) +
+  geom_line(aes(y = MA6, color = "MA(6)"), linewidth = 0.8) +
+  geom_line(aes(y = MA12, color = "MA(12)"), linewidth = 1.0) +
+  scale_color_manual(
+    values = c("Serie Original" = "gray60", 
+               "MA(3)" = "#E41A1C", 
+               "MA(6)" = "#377EB8", 
+               "MA(12)" = "#4DAF4A"),
+    breaks = c("Serie Original", "MA(3)", "MA(6)", "MA(12)")
+  ) +
+  labs(
+    title = "Promedios Móviles de la Serie de Precipitación",
+    subtitle = "Comparación de diferentes órdenes de suavizado",
+    x = "Fecha",
+    y = "Precipitación (mm)",
+    color = "Serie"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "bottom"
+  )
+```
+
+**Interpretación de los promedios móviles:**
+
+- **MA(3) - Promedio móvil de 3 meses**: Suaviza las fluctuaciones mensuales más extremas pero mantiene gran parte de la variabilidad estacional. Permite identificar ciclos de corto plazo.
+
+- **MA(6) - Promedio móvil de 6 meses**: Proporciona un suavizado intermedio que atenúa considerablemente las fluctuaciones de corto plazo. Facilita la visualización de patrones semestrales.
+
+- **MA(12) - Promedio móvil de 12 meses**: Elimina casi completamente la componente estacional, revelando únicamente la tendencia de largo plazo. Este promedio muestra que no existe una tendencia marcada creciente o decreciente en el período analizado.
+
+**Observaciones clave:**
+
+- La **ausencia de tendencia** en el MA(12) confirma que la serie es predominantemente estacionaria en media, con fluctuaciones alrededor de un nivel constante (~8-10 mm mensuales).
+
+- Los **patrones cíclicos** en MA(3) y MA(6) reflejan la estacionalidad bimodal identificada anteriormente.
+
+- La **amplitud constante** de las oscilaciones sugiere que la varianza se mantiene relativamente estable a lo largo del tiempo.
+
+### Descomposición de la Serie Temporal
+
+Descomponemos la serie en sus componentes principales: tendencia, estacionalidad y residuos.
+
+```{r decompose, fig.width=12, fig.height=10}
+# Convertir a ts para descomposición (necesario para stl)
+ts_regular <- ts(coredata(ts_analisis), 
+                  start = c(year(index(ts_analisis)[1]), month(index(ts_analisis)[1])),
+                  frequency = 12)
+
+# Descomposición STL (Seasonal and Trend decomposition using Loess)
+decomp <- stl(ts_regular, s.window = "periodic")
+
+# Visualizar descomposición
+plot(decomp, main = "Descomposición STL - Precipitación Mensual")
+```
+
+**Análisis de componentes:**
+
+- **Serie Original (Data)**: Muestra los datos observados con alta variabilidad.
+
+- **Componente Estacional (Seasonal)**: Revela el patrón bimodal claramente definido que se repite cada año, con picos en abril-mayo y octubre-noviembre.
+
+- **Componente de Tendencia (Trend)**: Confirma la ausencia de tendencia de largo plazo, mostrando fluctuaciones suaves alrededor de un nivel constante.
+
+- **Residuos (Remainder)**: Representan la variabilidad no explicada por estacionalidad ni tendencia. La distribución aproximadamente simétrica alrededor de cero sugiere que la descomposición captura adecuadamente los patrones principales.
