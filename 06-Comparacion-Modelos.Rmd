@@ -1,0 +1,309 @@
+# Comparación de Modelos {#comparacion}
+
+En este capítulo se realiza una **comparación integral** de los tres enfoques de pronóstico aplicados a la precipitación mensual en Cali:
+
+1. **Holt-Winters** (Capítulo \@ref(holt-winters)): Suavizamiento exponencial
+2. **SARIMA** (Capítulo \@ref(sarima)): Modelo estocástico Box-Jenkins
+3. **Prophet** (Capítulo \@ref(prophet)): Modelo aditivo generalizado (regresión)
+
+El objetivo es evaluar cuál método ofrece el mejor desempeño para este caso específico, considerando métricas cuantitativas, interpretabilidad y aplicabilidad práctica.
+
+## Introducción: Tres Paradigmas
+
+Cada modelo representa una **filosofía distinta** para abordar series temporales:
+
+### Holt-Winters: Suavizamiento Exponencial
+
+**Concepto central:**
+- Promedios ponderados con pesos que decaen exponencialmente
+- Captura nivel, tendencia y estacionalidad mediante ecuaciones recursivas
+- Énfasis en observaciones recientes
+
+**Ventajas:**
+- Simplicidad conceptual e interpretativa
+- Rápido ajuste y cómputo
+- Efectivo para patrones estacionales estables
+
+**Limitaciones:**
+- Intervalos de confianza menos rigurosos que ARIMA
+- No captura autocorrelación residual compleja
+- Requiere estacionariedad aproximada
+
+### SARIMA: Modelado Estocástico
+
+**Concepto central:**
+- Serie como proceso autorregresivo y de medias móviles
+- Modelado explícito de autocorrelación temporal
+- Fundamentación en teoría probabilística
+
+**Ventajas:**
+- Base estadística rigurosa (Box-Jenkins)
+- Intervalos de confianza bien calibrados
+- Captura dependencias temporales complejas
+
+**Limitaciones:**
+- Requiere identificación de órdenes (p, d, q)
+- Sensible a outliers y valores faltantes
+- Coeficientes menos interpretables
+
+### Prophet: Regresión Aditiva
+
+**Concepto central:**
+- Descomposición en componentes interpretables
+- Tendencia + estacionalidad + eventos + error
+- Modelado como regresión con predictores temporales
+
+**Ventajas:**
+- Componentes visualmente interpretables
+- Robusto a datos irregulares y outliers
+- Fácil incorporación de regresores externos
+
+**Limitaciones:**
+- Menos fundamentación teórica tradicional
+- Puede ser excesivo para series simples
+- Requiere ajuste de hiperparámetros
+
+**Nota**: Todos los modelos fueron ajustados en el Capítulo \@ref(preparacion). Los objetos `hw_model`, `sarima_model`, `prophet_model` y sus métricas están disponibles directamente.
+
+## Resumen de Modelos Ajustados
+
+```{r resumen-modelos-comparacion}
+cat("=== MODELOS PARA COMPARACIÓN ===\n\n")
+cat("1. HOLT-WINTERS\n")
+cat("   Parámetros: α =", round(hw_model$alpha, 4), 
+    "| β =", round(hw_model$beta, 4),
+    "| γ =", round(hw_model$gamma, 4), "\n\n")
+
+cat("2. SARIMA\n")
+orden <- arimaorder(sarima_model)
+if(length(orden) >= 6) {
+  cat("   Orden: SARIMA(", orden[1], ",", orden[2], ",", orden[3], 
+      ")(", orden[4], ",", orden[5], ",", orden[6], ")[12]\n\n", sep="")
+} else {
+  cat("   Orden: ARIMA(", orden[1], ",", orden[2], ",", orden[3], ")\n\n", sep="")
+}
+
+cat("3. PROPHET\n")
+cat("   Changepoints detectados:", length(prophet_model$changepoints), "\n")
+cat("   Modo: Aditivo | Estacionalidad: Fourier anual\n\n")
+```
+
+## Tabla Comparativa de Métricas
+
+```{r tabla-metricas, results='asis'}
+# Crear tabla de resultados
+metricas_comparacion <- data.frame(
+  Modelo = c("Holt-Winters", "SARIMA", "Prophet"),
+  MAE = c(MAE_hw, MAE_sarima, MAE_prophet),
+  RMSE = c(RMSE_hw, RMSE_sarima, RMSE_prophet),
+  MAPE = c(MAPE_hw, MAPE_sarima, MAPE_prophet),
+  `Cobertura IC (%)` = c(cobertura_hw, cobertura_sarima, cobertura_prophet),
+  check.names = FALSE
+)
+
+# Identificar mejor modelo para cada métrica
+metricas_comparacion <- metricas_comparacion %>%
+  mutate(
+    MAE_rank = rank(MAE),
+    RMSE_rank = rank(RMSE),
+    MAPE_rank = rank(MAPE)
+  )
+
+# Mostrar tabla formateada
+knitr::kable(
+  metricas_comparacion %>% select(-MAE_rank, -RMSE_rank, -MAPE_rank),
+  digits = c(0, 3, 3, 2, 1),
+  caption = "Comparación de métricas de pronóstico para 1998 (12 meses)",
+  align = c('l', 'r', 'r', 'r', 'r')
+)
+
+cat("\n\n")
+
+# Resumen de rankings
+cat("=== RANKINGS POR MÉTRICA (1 = Mejor) ===\n\n")
+
+cat("Error Absoluto Medio (MAE):\n")
+mae_ranking <- metricas_comparacion %>% arrange(MAE) %>% select(Modelo, MAE)
+for(i in 1:nrow(mae_ranking)) {
+  cat("  ", i, ". ", mae_ranking$Modelo[i], " - ", round(mae_ranking$MAE[i], 3), " mm\n", sep = "")
+}
+
+cat("\nRaíz del Error Cuadrático Medio (RMSE):\n")
+rmse_ranking <- metricas_comparacion %>% arrange(RMSE) %>% select(Modelo, RMSE)
+for(i in 1:nrow(rmse_ranking)) {
+  cat("  ", i, ". ", rmse_ranking$Modelo[i], " - ", round(rmse_ranking$RMSE[i], 3), " mm\n", sep = "")
+}
+
+cat("\nError Porcentual Absoluto Medio (MAPE):\n")
+mape_ranking <- metricas_comparacion %>% arrange(MAPE) %>% select(Modelo, MAPE)
+for(i in 1:nrow(mape_ranking)) {
+  cat("  ", i, ". ", mape_ranking$Modelo[i], " - ", round(mape_ranking$MAPE[i], 2), "%\n", sep = "")
+}
+
+# Identificar ganador general
+mejor_modelo <- names(which.min(table(c(
+  metricas_comparacion$Modelo[which.min(metricas_comparacion$MAE)],
+  metricas_comparacion$Modelo[which.min(metricas_comparacion$RMSE)],
+  metricas_comparacion$Modelo[which.min(metricas_comparacion$MAPE)]
+))))
+
+cat("\n>>> MODELO CON MEJOR DESEMPEÑO GENERAL:", mejor_modelo, "<<<\n")
+```
+
+## Visualización Comparativa de Pronósticos
+
+```{r grafico-comparacion-modelos, fig.width=14, fig.height=8}
+# Crear dataframe largo para ggplot
+fechas_test <- index(ts_test)
+observados <- as.numeric(ts_test)
+
+datos_graficos <- data.frame(
+  Fecha = rep(fechas_test, 4),
+  Valor = c(
+    observados,
+    hw_pred,
+    sarima_pred,
+    prophet_pred
+  ),
+  Tipo = rep(c("Observado", "Holt-Winters", "SARIMA", "Prophet"), each = length(fechas_test))
+)
+
+# Intervalos de confianza (como ribbons)
+intervalos_df <- data.frame(
+  Fecha = fechas_test,
+  HW_lower = hw_lower,
+  HW_upper = hw_upper,
+  SARIMA_lower = sarima_lower,
+  SARIMA_upper = sarima_upper,
+  Prophet_lower = prophet_lower,
+  Prophet_upper = prophet_upper
+)
+
+# Gráfico principal
+ggplot(datos_graficos, aes(x = Fecha, y = Valor, color = Tipo, shape = Tipo)) +
+  # Intervalos de confianza
+  geom_ribbon(data = intervalos_df, 
+              aes(x = Fecha, ymin = HW_lower, ymax = HW_upper),
+              inherit.aes = FALSE, fill = "blue", alpha = 0.15) +
+  geom_ribbon(data = intervalos_df,
+              aes(x = Fecha, ymin = SARIMA_lower, ymax = SARIMA_upper),
+              inherit.aes = FALSE, fill = "red", alpha = 0.15) +
+  geom_ribbon(data = intervalos_df,
+              aes(x = Fecha, ymin = Prophet_lower, ymax = Prophet_upper),
+              inherit.aes = FALSE, fill = "green", alpha = 0.15) +
+  # Líneas de pronóstico
+  geom_line(aes(linetype = Tipo), linewidth = 1.0) +
+  geom_point(size = 2.5) +
+  # Escalas
+  scale_color_manual(
+    values = c(
+      "Observado" = "black",
+      "Holt-Winters" = "blue",
+      "SARIMA" = "red",
+      "Prophet" = "green"
+    )
+  ) +
+  scale_shape_manual(
+    values = c("Observado" = 19, "Holt-Winters" = 17, "SARIMA" = 15, "Prophet" = 18)
+  ) +
+  scale_linetype_manual(
+    values = c("Observado" = "solid", "Holt-Winters" = "dashed", 
+               "SARIMA" = "dotted", "Prophet" = "twodash")
+  ) +
+  # Etiquetas
+  labs(
+    title = "Comparación de Pronósticos: Holt-Winters vs. SARIMA vs. Prophet (1998)",
+    subtitle = "Valores observados y predicciones con intervalos de confianza al 95%",
+    x = "Fecha",
+    y = "Precipitación (mm)",
+    color = "Método",
+    shape = "Método",
+    linetype = "Método"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold")
+  )
+```
+
+### Análisis Visual
+
+Del gráfico anterior se observa:
+
+**Similitud general:**
+- Los tres modelos capturan el patrón estacional bimodal
+- Picos en abril-mayo y octubre-noviembre bien identificados
+- Diferencias sutiles entre pronósticos
+
+**Intervalos de confianza:**
+- Prophet: Intervalos más amplios (más conservadores)
+- SARIMA: Intervalos intermedios
+- Holt-Winters: Intervalos más estrechos
+
+**Desviaciones notables:**
+- Meses con mayor discrepancia entre modelos: Marzo, Julio
+- Todos los modelos capturan razonablemente la temporada seca (julio-agosto)
+
+## Comparación Conceptual
+
+```{r tabla-conceptual, results='asis'}
+comparacion_conceptual <- data.frame(
+  Aspecto = c(
+    "Paradigma",
+    "Manejo de tendencia",
+    "Modelado de estacionalidad",
+    "Datos faltantes",
+    "Robustez ante outliers",
+    "Interpretabilidad",
+    "Regresores externos",
+    "Fundamentación teórica",
+    "Complejidad computacional",
+    "Horizonte de pronóstico óptimo"
+  ),
+  `Holt-Winters` = c(
+    "Suavizamiento exponencial",
+    "Tendencia lineal suavizada",
+    "Factores estacionales aditivos/multiplicativos",
+    "Requiere imputación previa",
+    "Moderada",
+    "Alta (componentes claros)",
+    "No soporta nativamente",
+    "Estadística descriptiva",
+    "Muy baja",
+    "Corto-mediano plazo (1-12 meses)"
+  ),
+  SARIMA = c(
+    "Proceso estocástico",
+    "Diferenciación (d, D)",
+    "AR/MA estacional con periodo s",
+    "Problemático (interrumpe serie)",
+    "Baja (muy sensible)",
+    "Moderada (coeficientes técnicos)",
+    "ARIMAX (requiere experiencia)",
+    "Teoría probabilística rigurosa",
+    "Media",
+    "Corto plazo (1-6 meses)"
+  ),
+  Prophet = c(
+    "Regresión aditiva (GAM)",
+    "Piecewise linear con changepoints",
+    "Series de Fourier flexibles",
+    "Manejo automático",
+    "Alta (robusto)",
+    "Muy alta (componentes visuales)",
+    "add_regressor() (muy simple)",
+    "Regresión bayesiana",
+    "Media-alta",
+    "Mediano plazo (6-24 meses)"
+  ),
+  check.names = FALSE
+)
+
+knitr::kable(
+  comparacion_conceptual,
+  caption = "Comparación conceptual de los tres enfoques",
+  align = c('l', 'l', 'l', 'l')
+)
+```
