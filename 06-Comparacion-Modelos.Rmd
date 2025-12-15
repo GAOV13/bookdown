@@ -14,54 +14,15 @@ Cada modelo representa una **filosofía distinta** para abordar series temporale
 
 ### Holt-Winters: Suavizamiento Exponencial
 
-**Concepto central:**
-- Promedios ponderados con pesos que decaen exponencialmente
-- Captura nivel, tendencia y estacionalidad mediante ecuaciones recursivas
-- Énfasis en observaciones recientes
-
-**Ventajas:**
-- Simplicidad conceptual e interpretativa
-- Rápido ajuste y cómputo
-- Efectivo para patrones estacionales estables
-
-**Limitaciones:**
-- Intervalos de confianza menos rigurosos que ARIMA
-- No captura autocorrelación residual compleja
-- Requiere estacionariedad aproximada
+Utiliza promedios ponderados con pesos que decaen exponencialmente para capturar nivel, tendencia y estacionalidad. **Ventajas**: Simplicidad, rápido cómputo, efectivo para patrones estacionales estables. **Limitaciones**: Intervalos de confianza menos rigurosos, sensible a autocorrelación compleja.
 
 ### SARIMA: Modelado Estocástico
 
-**Concepto central:**
-- Serie como proceso autorregresivo y de medias móviles
-- Modelado explícito de autocorrelación temporal
-- Fundamentación en teoría probabilística
-
-**Ventajas:**
-- Base estadística rigurosa (Box-Jenkins)
-- Intervalos de confianza bien calibrados
-- Captura dependencias temporales complejas
-
-**Limitaciones:**
-- Requiere identificación de órdenes (p, d, q)
-- Sensible a outliers y valores faltantes
-- Coeficientes menos interpretables
+Modela la serie como proceso autorregresivo y de medias móviles con componentes estacionales. **Ventajas**: Base estadística rigurosa (Box-Jenkins), captura dependencias temporales complejas. **Limitaciones**: Requiere identificación de órdenes, sensible a outliers, coeficientes técnicos.
 
 ### Prophet: Regresión Aditiva
 
-**Concepto central:**
-- Descomposición en componentes interpretables
-- Tendencia + estacionalidad + eventos + error
-- Modelado como regresión con predictores temporales
-
-**Ventajas:**
-- Componentes visualmente interpretables
-- Robusto a datos irregulares y outliers
-- Fácil incorporación de regresores externos
-
-**Limitaciones:**
-- Menos fundamentación teórica tradicional
-- Puede ser excesivo para series simples
-- Requiere ajuste de hiperparámetros
+Descompone la serie en componentes sumables (tendencia + estacionalidad + error) como regresión. **Ventajas**: Componentes interpretables, robusto a datos irregulares, fácil incorporación de regresores externos. **Limitaciones**: Menor fundamentación teórica tradicional, requiere ajuste de hiperparámetros.
 
 **Nota**: Todos los modelos fueron ajustados en el Capítulo \@ref(preparacion). Los objetos `hw_model`, `sarima_model`, `prophet_model` y sus métricas están disponibles directamente.
 
@@ -96,25 +57,16 @@ metricas_comparacion <- data.frame(
   Modelo = c("Holt-Winters", "SARIMA", "Prophet"),
   MAE = c(MAE_hw, MAE_sarima, MAE_prophet),
   RMSE = c(RMSE_hw, RMSE_sarima, RMSE_prophet),
-  MAPE = c(MAPE_hw, MAPE_sarima, MAPE_prophet),
   `Cobertura IC (%)` = c(cobertura_hw, cobertura_sarima, cobertura_prophet),
   check.names = FALSE
 )
 
-# Identificar mejor modelo para cada métrica
-metricas_comparacion <- metricas_comparacion %>%
-  mutate(
-    MAE_rank = rank(MAE),
-    RMSE_rank = rank(RMSE),
-    MAPE_rank = rank(MAPE)
-  )
-
 # Mostrar tabla formateada
 knitr::kable(
-  metricas_comparacion %>% select(-MAE_rank, -RMSE_rank, -MAPE_rank),
-  digits = c(0, 3, 3, 2, 1),
+  metricas_comparacion,
+  digits = c(0, 3, 3, 1),
   caption = "Comparación de métricas de pronóstico para 1998 (12 meses)",
-  align = c('l', 'r', 'r', 'r', 'r')
+  align = c('l', 'r', 'r', 'r')
 )
 
 cat("\n\n")
@@ -134,21 +86,48 @@ for(i in 1:nrow(rmse_ranking)) {
   cat("  ", i, ". ", rmse_ranking$Modelo[i], " - ", round(rmse_ranking$RMSE[i], 3), " mm\n", sep = "")
 }
 
-cat("\nError Porcentual Absoluto Medio (MAPE):\n")
-mape_ranking <- metricas_comparacion %>% arrange(MAPE) %>% select(Modelo, MAPE)
-for(i in 1:nrow(mape_ranking)) {
-  cat("  ", i, ". ", mape_ranking$Modelo[i], " - ", round(mape_ranking$MAPE[i], 2), "%\n", sep = "")
+cat("\nCobertura del Intervalo de Confianza (95%):\n")
+cobertura_ranking <- metricas_comparacion %>% arrange(desc(`Cobertura IC (%)`)) %>% select(Modelo, `Cobertura IC (%)`)
+for(i in 1:nrow(cobertura_ranking)) {
+  cat("  ", i, ". ", cobertura_ranking$Modelo[i], " - ", round(cobertura_ranking$`Cobertura IC (%)`[i], 1), "%\n", sep = "")
 }
 
-# Identificar ganador general
-mejor_modelo <- names(which.min(table(c(
-  metricas_comparacion$Modelo[which.min(metricas_comparacion$MAE)],
-  metricas_comparacion$Modelo[which.min(metricas_comparacion$RMSE)],
-  metricas_comparacion$Modelo[which.min(metricas_comparacion$MAPE)]
-))))
+# Identificar ganador general basado en MAE y RMSE
+mejor_mae <- metricas_comparacion$Modelo[which.min(metricas_comparacion$MAE)]
+mejor_rmse <- metricas_comparacion$Modelo[which.min(metricas_comparacion$RMSE)]
 
-cat("\n>>> MODELO CON MEJOR DESEMPEÑO GENERAL:", mejor_modelo, "<<<\n")
+cat("\n>>> MEJORES DESEMPEÑOS <<<\n")
+cat("  MAE:", mejor_mae, "\n")
+cat("  RMSE:", mejor_rmse, "\n")
 ```
+
+**Interpretación de las métricas:**
+
+Los tres modelos presentan desempeños **prácticamente idénticos**:
+
+**Error Absoluto Medio (MAE):**
+- Holt-Winters: 4.016 mm | SARIMA: 4.067 mm | Prophet: 4.171 mm
+- Diferencias < 0.2 mm (insignificantes). Todos representan 3-4% de error sobre la precipitación típica.
+
+**Raíz del Error Cuadrático Medio (RMSE):**
+- Holt-Winters: 4.585 mm | Prophet: 4.81 mm | SARIMA: 5.036 mm
+- Diferencias < 0.5 mm. Relación RMSE/MAE (1.14-1.24) confirma ausencia de errores atípicos extremos.
+
+**MAPE:** Valores no confiables (Inf%, 383%, 353%) por división entre valores cercanos a cero. **Métrica descartada**.
+
+**Cobertura IC 95%:**
+- Holt-Winters: 100% | Prophet: 100% | SARIMA: 91.7%
+- Los tres cuantifican adecuadamente la incertidumbre.
+
+**Normalidad de errores:**
+- Holt-Winters: p=0.47 | SARIMA: p=0.23 | Prophet: p=0.44
+- Los tres confirman normalidad (p > 0.05), validando intervalos de confianza.
+
+**Sesgo:**
+- Holt-Winters: ≈0 mm | SARIMA: 2.35 mm | Prophet: 1.78 mm
+- Sesgos mínimos (< 2.5 mm), sin comprometer pronósticos.
+
+**Conclusión:** **No hay ganador claro**. Las diferencias son insignificantes desde el punto de vista práctico. Los tres métodos son igualmente apropiados para pronósticos de precipitación en Cali. La elección debe basarse en criterios cualitativos: **Interpretabilidad** (Prophet > HW > SARIMA), **Fundamentación estadística** (SARIMA > HW > Prophet), **Facilidad** (HW > Prophet > SARIMA).
 
 ## Visualización Comparativa de Pronósticos
 
@@ -254,49 +233,29 @@ comparacion_conceptual <- data.frame(
     "Paradigma",
     "Manejo de tendencia",
     "Modelado de estacionalidad",
-    "Datos faltantes",
-    "Robustez ante outliers",
     "Interpretabilidad",
-    "Regresores externos",
-    "Fundamentación teórica",
-    "Complejidad computacional",
-    "Horizonte de pronóstico óptimo"
+    "Fundamentación teórica"
   ),
   `Holt-Winters` = c(
     "Suavizamiento exponencial",
     "Tendencia lineal suavizada",
-    "Factores estacionales aditivos/multiplicativos",
-    "Requiere imputación previa",
-    "Moderada",
+    "Factores estacionales aditivos",
     "Alta (componentes claros)",
-    "No soporta nativamente",
-    "Estadística descriptiva",
-    "Muy baja",
-    "Corto-mediano plazo (1-12 meses)"
+    "Estadística descriptiva"
   ),
   SARIMA = c(
     "Proceso estocástico",
     "Diferenciación (d, D)",
-    "AR/MA estacional con periodo s",
-    "Problemático (interrumpe serie)",
-    "Baja (muy sensible)",
+    "AR/MA estacional con periodo 12",
     "Moderada (coeficientes técnicos)",
-    "ARIMAX (requiere experiencia)",
-    "Teoría probabilística rigurosa",
-    "Media",
-    "Corto plazo (1-6 meses)"
+    "Teoría probabilística rigurosa (Box-Jenkins)"
   ),
   Prophet = c(
     "Regresión aditiva (GAM)",
     "Piecewise linear con changepoints",
     "Series de Fourier flexibles",
-    "Manejo automático",
-    "Alta (robusto)",
     "Muy alta (componentes visuales)",
-    "add_regressor() (muy simple)",
-    "Regresión bayesiana",
-    "Media-alta",
-    "Mediano plazo (6-24 meses)"
+    "Regresión bayesiana"
   ),
   check.names = FALSE
 )

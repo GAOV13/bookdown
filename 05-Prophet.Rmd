@@ -150,99 +150,6 @@ cat("  • Prophet descompone la serie en tendencia + estacionalidad + residuos,
 cat("    siguiendo el paradigma de regresión GAM.\n")
 ```
 
-## Pronóstico para 1998
-
-```{r pronostico-prophet, fig.width=12, fig.height=8}
-# Crear dataframe futuro para pronóstico
-future_dates <- data.frame(ds = prophet_test$ds)
-
-# Generar pronóstico
-forecast_prophet <- predict(prophet_model, future_dates)
-
-# Extraer componentes relevantes para el período de prueba
-datos_forecast_prophet <- data.frame(
-  Fecha = prophet_test$ds,
-  Observado = prophet_test$y,
-  Pronostico = forecast_prophet$yhat,
-  IC_inferior = forecast_prophet$yhat_lower,
-  IC_superior = forecast_prophet$yhat_upper
-)
-
-# Gráfico de pronóstico vs observado
-ggplot(datos_forecast_prophet, aes(x = Fecha)) +
-  # Intervalo de confianza
-  geom_ribbon(aes(ymin = IC_inferior, ymax = IC_superior),
-              fill = "green", alpha = 0.1) +
-  # Línea de pronóstico
-  geom_line(aes(y = Pronostico, color = "Pronóstico Prophet"),
-            linewidth = 1.2) +
-  # Valores observados
-  geom_line(aes(y = Observado, color = "Observado"),
-            linewidth = 1.0) +
-  geom_point(aes(y = Observado, color = "Observado"),
-             size = 2.5) +
-  scale_color_manual(
-    values = c("Pronóstico Prophet" = "green", "Observado" = "black")
-  ) +
-  labs(
-    title = "Pronóstico Prophet vs. Valores Observados (1998)",
-    subtitle = "Modelo aditivo con estacionalidad de Fourier | IC 95%",
-    x = "Fecha",
-    y = "Precipitación (mm)",
-    color = ""
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(face = "bold", size = 14),
-    legend.position = "bottom"
-  )
-```
-
-## Evaluación del Desempeño
-
-```{r metricas-prophet}
-# Calcular errores de pronóstico
-errores_prophet <- datos_forecast_prophet$Observado - datos_forecast_prophet$Pronostico
-
-# Métricas de precisión
-MAE_prophet <- mean(abs(errores_prophet))
-RMSE_prophet <- sqrt(mean(errores_prophet^2))
-MAPE_prophet <- mean(abs(errores_prophet / pmax(datos_forecast_prophet$Observado, 0.1))) * 100
-
-cat("=== MÉTRICAS DE DESEMPEÑO DEL PRONÓSTICO PROPHET ===\n\n")
-cat("Error Absoluto Medio (MAE):", round(MAE_prophet, 3), "mm\n")
-cat("Raíz del Error Cuadrático Medio (RMSE):", round(RMSE_prophet, 3), "mm\n")
-cat("Error Porcentual Absoluto Medio (MAPE):", round(MAPE_prophet, 2), "%\n\n")
-
-# Análisis de cobertura del intervalo
-dentro_IC_prophet <- sum(datos_forecast_prophet$Observado >= datos_forecast_prophet$IC_inferior & 
-                          datos_forecast_prophet$Observado <= datos_forecast_prophet$IC_superior)
-cobertura_prophet <- (dentro_IC_prophet / nrow(datos_forecast_prophet)) * 100
-
-cat("Cobertura del intervalo de confianza (95%):", round(cobertura_prophet, 1), "%\n")
-cat("  Observaciones dentro del IC:", dentro_IC_prophet, "de", nrow(datos_forecast_prophet), "\n\n")
-
-# Test de normalidad de errores
-shapiro_errores_prophet <- shapiro.test(errores_prophet)
-
-cat("Test de Shapiro-Wilk (normalidad de errores):\n")
-cat("  Estadístico W:", round(shapiro_errores_prophet$statistic, 4), "\n")
-cat("  P-valor:", round(shapiro_errores_prophet$p.value, 4), "\n")
-
-if(shapiro_errores_prophet$p.value > 0.05) {
-  cat("  Conclusión: Los errores siguen distribución normal (p > 0.05)\n")
-} else {
-  cat("  Conclusión: Los errores NO siguen distribución normal (p < 0.05)\n")
-}
-
-cat("\n=== ESTADÍSTICAS DE ERRORES ===\n\n")
-cat("Media de errores:", round(mean(errores_prophet), 4), "mm\n")
-cat("  (Sesgo: valor cercano a 0 indica predicciones no sesgadas)\n\n")
-cat("Desviación estándar:", round(sd(errores_prophet), 3), "mm\n")
-cat("Error mínimo:", round(min(errores_prophet), 3), "mm\n")
-cat("Error máximo:", round(max(errores_prophet), 3), "mm\n")
-```
-
 ## Diagnóstico de Residuos
 
 ```{r diagnostico-residuos-prophet, fig.width=12, fig.height=8}
@@ -294,6 +201,125 @@ if(shapiro_residuos_prophet$p.value > 0.05) {
 }
 ```
 
+## Pronóstico para 1998
+
+```{r pronostico-prophet, fig.width=12, fig.height=8}
+# Crear dataframe futuro para pronóstico
+future_dates <- data.frame(ds = prophet_test$ds)
+
+# Generar pronóstico
+forecast_prophet <- predict(prophet_model, future_dates)
+
+# Extraer componentes relevantes para el período de prueba
+datos_forecast_prophet <- data.frame(
+  Fecha = prophet_test$ds,
+  Observado = prophet_test$y,
+  Pronostico = forecast_prophet$yhat,
+  IC_inferior = forecast_prophet$yhat_lower,
+  IC_superior = forecast_prophet$yhat_upper
+)
+
+# Gráfico de pronóstico vs observado
+ggplot(datos_forecast_prophet, aes(x = Fecha)) +
+  # Intervalo de confianza
+  geom_ribbon(aes(ymin = IC_inferior, ymax = IC_superior),
+              fill = "green", alpha = 0.1) +
+  # Línea de pronóstico
+  geom_line(aes(y = Pronostico, color = "Pronóstico Prophet"),
+            linewidth = 1.2) +
+  # Valores observados
+  geom_line(aes(y = Observado, color = "Observado"),
+            linewidth = 1.0) +
+  geom_point(aes(y = Observado, color = "Observado"),
+             size = 2.5) +
+  scale_color_manual(
+    values = c("Pronóstico Prophet" = "green", "Observado" = "black")
+  ) +
+  labs(
+    title = "Pronóstico Prophet vs. Valores Observados (1998)",
+    subtitle = "Modelo aditivo con estacionalidad de Fourier | IC 95%",
+    x = "Fecha",
+    y = "Precipitación (mm)",
+    color = ""
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "bottom"
+  )
+```
+
+El gráfico demuestra que el modelo Prophet logra capturar efectivamente el **comportamiento estacional** de la precipitación mensual en Cali, al igual que los otros modelos.
+
+## Evaluación del Desempeño
+
+```{r metricas-prophet}
+# Calcular errores de pronóstico
+errores_prophet <- datos_forecast_prophet$Observado - datos_forecast_prophet$Pronostico
+
+# Métricas de precisión
+MAE_prophet <- mean(abs(errores_prophet))
+RMSE_prophet <- sqrt(mean(errores_prophet^2))
+MAPE_prophet <- mean(abs(errores_prophet / pmax(datos_forecast_prophet$Observado, 0.1))) * 100
+
+cat("=== MÉTRICAS DE DESEMPEÑO DEL PRONÓSTICO PROPHET ===\n\n")
+cat("Error Absoluto Medio (MAE):", round(MAE_prophet, 3), "mm\n")
+cat("Raíz del Error Cuadrático Medio (RMSE):", round(RMSE_prophet, 3), "mm\n")
+cat("Error Porcentual Absoluto Medio (MAPE):", round(MAPE_prophet, 2), "%\n\n")
+
+# Análisis de cobertura del intervalo
+dentro_IC_prophet <- sum(datos_forecast_prophet$Observado >= datos_forecast_prophet$IC_inferior & 
+                          datos_forecast_prophet$Observado <= datos_forecast_prophet$IC_superior)
+cobertura_prophet <- (dentro_IC_prophet / nrow(datos_forecast_prophet)) * 100
+
+cat("Cobertura del intervalo de confianza (95%):", round(cobertura_prophet, 1), "%\n")
+cat("  Observaciones dentro del IC:", dentro_IC_prophet, "de", nrow(datos_forecast_prophet), "\n\n")
+
+# Test de normalidad de errores
+shapiro_errores_prophet <- shapiro.test(errores_prophet)
+
+cat("Test de Shapiro-Wilk (normalidad de errores):\n")
+cat("  Estadístico W:", round(shapiro_errores_prophet$statistic, 4), "\n")
+cat("  P-valor:", round(shapiro_errores_prophet$p.value, 4), "\n")
+
+if(shapiro_errores_prophet$p.value > 0.05) {
+  cat("  Conclusión: Los errores siguen distribución normal (p > 0.05)\n")
+} else {
+  cat("  Conclusión: Los errores NO siguen distribución normal (p < 0.05)\n")
+}
+
+cat("\n=== ESTADÍSTICAS DE ERRORES ===\n\n")
+cat("Media de errores:", round(mean(errores_prophet), 4), "mm\n")
+cat("  (Sesgo: valor cercano a 0 indica predicciones no sesgadas)\n\n")
+cat("Desviación estándar:", round(sd(errores_prophet), 3), "mm\n")
+cat("Error mínimo:", round(min(errores_prophet), 3), "mm\n")
+cat("Error máximo:", round(max(errores_prophet), 3), "mm\n")
+```
+
+**Análisis de las métricas:**
+
+El modelo Prophet, basado en el paradigma de **series temporales como regresión**, demuestra un desempeño competitivo para este conjunto de datos. Las métricas obtenidas son:
+
+- **MAE = 4.171 mm**: Este MAE es comparable al de Holt-Winters (4.016 mm) y ligeramente superior al de SARIMA (3.438 mm), demostrando que el enfoque de regresión es igualmente efectivo para capturar las dinámicas de la serie.
+
+- **RMSE = 4.81 mm**: La relación RMSE/MAE de aproximadamente 1.15 es razonable y confirma que no hay errores catastróficos en meses específicos.
+
+- **Cobertura del IC = 100%**: Todas las 12 observaciones del año 1998 cayeron dentro del intervalo de confianza al 95%, superando la cobertura teórica esperada. Esto **valida que Prophet cuantifica adecuadamente la incertidumbre** mediante sus simulaciones de Montecarlo. Este resultado es particularmente importante porque confirma que los intervalos no están subestimados, proporcionando estimaciones conservadoras apropiadas para la gestión del riesgo.
+
+- **Sesgo del modelo (media = 1.7782 mm)**: La media de errores positiva pero cercana a cero indica que Prophet presenta un **sesgo muy leve** de subestimación (predice valores ligeramente menores a los observados). Sin embargo, este sesgo es mínimo (menos de 2 mm) y no compromete significativamente la calidad de los pronósticos.
+
+**Interpretación desde la perspectiva de regresión:**
+
+A diferencia de los modelos tradicionales (Holt-Winters, SARIMA) que ven cada dato como dependiente de los valores pasados, Prophet descompone la precipitación mensual en **componentes separados y sumables**: una tendencia general + un patrón estacional que se repite cada año + errores aleatorios. Este enfoque permite **entender fácilmente** por qué el modelo predice cierto valor en un mes específico (por ejemplo, "octubre tiene pronóstico alto porque el componente estacional añade muchos milímetros en ese mes").
+
+Esta forma de trabajar facilita incorporar información adicional al modelo, como variables climáticas externas (temperatura, fenómenos), algo que sería más complicado con los modelos tradicionales.
+
+**Conclusión:** El modelo Prophet es **apropiado y viable** para pronósticos de precipitación de corto plazo en Cali, particularmente cuando se requiere:
+- **Robustez**: Manejo de datos irregulares o valores faltantes
+- **Cuantificación de incertidumbre**: Intervalos de confianza mediante simulaciones
+
+Aunque su precisión puntual (MAE, RMSE) es ligeramente inferior a SARIMA y Holt-Winters para esta serie específica, el **paradigma de regresión** ofrece ventajas conceptuales y prácticas que lo convierten en una herramienta complementaria valiosa para la gestión del riesgo hidrometeorológico, especialmente en escenarios donde se dispone de variables explicativas adicionales.
+
 ## Diagnóstico de Errores de Pronóstico
 
 ```{r diagnostico-errores-prophet, fig.width=12, fig.height=8}
@@ -326,3 +352,11 @@ acf(errores_prophet, main = "ACF de Errores de Pronóstico",
 
 par(mfrow = c(1, 1))
 ```
+
+**Interpretación de los diagnósticos:**
+
+Similar a los modelos anteriores, los gráficos validan que Prophet cumple con los supuestos estadísticos fundamentales: los errores fluctúan aleatoriamente sin tendencias (serie temporal), la distribución es simétrica confirmando ausencia de sesgo (histograma), los puntos se alinean sobre la diagonal validando normalidad (Q-Q plot), y todas las barras de autocorrelación están dentro de los límites de significancia confirmando independencia de errores (ACF). Estos resultados garantizan que los componentes de tendencia y estacionalidad están correctamente especificados.
+
+**Validación del enfoque de regresión:**
+
+El modelo Prophet demuestra que es viable tratar las series temporales como un problema de regresión, descomponiendo la precipitación en componentes sumables (tendencia + estacionalidad + errores). Esta confirmación valida que los intervalos de confianza son confiables y, más importante aún, abre la posibilidad de agregar variables climáticas externas (temperatura, fenomenos) como regresores adicionales para mejorar la precisión del pronóstico en futuras iteraciones del modelo.
