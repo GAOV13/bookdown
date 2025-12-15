@@ -2,82 +2,7 @@
 
 En este capítulo se presenta el análisis exploratorio de los datos de precipitación para Cali, Colombia, obtenidos de la estación meteorológica CALI ALFONSO BONILL (NASA/NOAA). El análisis incluye la visualización de series temporales, identificación de rezagos (lags), cálculo de promedios móviles y detección de estacionalidad.
 
-## Carga y Preparación de Datos
-
-```{r setup-datos, message=FALSE, warning=FALSE}
-# Cargar librerías necesarias
-library(tidyverse)
-library(lubridate)
-library(forecast)
-library(zoo)
-library(gridExtra)
-
-# Leer datos
-datos <- read_csv("Data/Excel/monthly_precipitation.csv")
-
-# Preparar datos
-datos_limpios <- datos %>%
-  mutate(
-    DATE = ym(DATE),
-    # Convertir precipitación (ya está en mm x 10, dividir por 10)
-    PRCP = PRCP / 10,
-    # Convertir temperaturas de décimas de grado a grados
-    TMAX = TMAX / 10,
-    TMIN = TMIN / 10,
-    TAVG = TAVG / 10
-  )
-
-# Información ANTES de la interpolación
-cat("=== INFORMACIÓN ANTES DE INTERPOLACIÓN ===\n")
-cat("Total de observaciones:", nrow(datos_limpios), "\n")
-cat("Valores faltantes en PRCP:", sum(is.na(datos_limpios$PRCP)), "\n")
-cat("Porcentaje de NAs:", round(100 * sum(is.na(datos_limpios$PRCP)) / nrow(datos_limpios), 2), "%\n\n")
-
-# Interpolación de valores faltantes usando spline cúbico
-# Crear índice numérico para la interpolación
-datos_limpios <- datos_limpios %>%
-  mutate(indice = row_number())
-
-# Identificar posiciones con datos válidos
-indices_validos <- which(!is.na(datos_limpios$PRCP))
-valores_validos <- datos_limpios$PRCP[indices_validos]
-
-# Aplicar interpolación usando na.approx de zoo (interpolación lineal más conservadora)
-if(length(indices_validos) >= 2) {
-  # Usar na.approx para interpolación lineal (más conservadora que spline)
-  # maxgap limita cuántos NAs consecutivos se interpolan
-  datos_limpios$PRCP <- na.approx(datos_limpios$PRCP, maxgap = 3, na.rm = FALSE)
-  
-  # Si aún quedan NAs al inicio o final, usar na.locf (last observation carried forward/backward)
-  datos_limpios$PRCP <- na.locf(datos_limpios$PRCP, na.rm = FALSE, fromLast = FALSE)
-  datos_limpios$PRCP <- na.locf(datos_limpios$PRCP, na.rm = FALSE, fromLast = TRUE)
-  
-  # Asegurar que no haya valores negativos (la precipitación no puede ser negativa)
-  datos_limpios <- datos_limpios %>%
-    mutate(PRCP = pmax(PRCP, 0))
-  
-  cat("=== INFORMACIÓN DESPUÉS DE INTERPOLACIÓN ===\n")
-  cat("Valores faltantes restantes:", sum(is.na(datos_limpios$PRCP)), "\n")
-  
-  # Mostrar estadísticas para detectar valores anómalos
-  cat("\nEstadísticas de precipitación:\n")
-  cat("  Máximo:", round(max(datos_limpios$PRCP, na.rm = TRUE), 2), "mm\n")
-  cat("  Percentil 99:", round(quantile(datos_limpios$PRCP, 0.99, na.rm = TRUE), 2), "mm\n")
-  
-} else {
-  cat("ADVERTENCIA: No hay suficientes datos válidos para interpolación.\n")
-}
-
-cat("Precipitación promedio:", round(mean(datos_limpios$PRCP, na.rm = TRUE), 2), "mm\n")
-```
-
-```{r crear-serie-temporal}
-# Crear serie temporal usando zoo (maneja mejor valores faltantes y fechas irregulares)
-ts_mensual <- zoo(datos_limpios$PRCP, order.by = datos_limpios$DATE)
-
-cat("Datos mensuales:", nrow(datos_limpios), "meses\n")
-cat("Rango temporal:", min(year(datos_limpios$DATE)), "-", max(year(datos_limpios$DATE)), "\n")
-```
+**Nota**: Los datos utilizados en este capítulo fueron cargados y preparados en el Capítulo \@ref(preparacion). Los objetos `ts_mensual`, `datos_limpios` y `datos_analisis` están disponibles directamente.
 
 ## Visualización de Series Temporales
 
@@ -101,14 +26,7 @@ autoplot(ts_mensual) +
 
 Observando la serie completa, se identifican períodos con datos faltantes o inconsistentes, particularmente antes de 1972 y después de 1999. Para el análisis subsecuente, se trabajará con el período **1972-07 a 1999-12**, que presenta la mayor continuidad y calidad de datos.
 
-```{r filtrar-periodo-analisis}
-# Filtrar período con mayor calidad de datos desde el objeto zoo
-ts_analisis <- window(ts_mensual, start = as.Date("1972-07-01"), end = as.Date("1999-12-01"))
-
-# Crear dataframe correspondiente
-datos_analisis <- datos_limpios %>%
-  filter(DATE >= ym("1972-07") & DATE <= ym("1999-12"))
-
+```{r info-periodo-analisis}
 cat("Período de análisis seleccionado:\n")
 cat("  Desde:", format(min(datos_analisis$DATE), "%Y-%m"), "\n")
 cat("  Hasta:", format(max(datos_analisis$DATE), "%Y-%m"), "\n")
@@ -232,11 +150,6 @@ Este gráfico revela información crucial sobre la **consistencia del comportami
 
 - **Variabilidad reducida**: La dispersión entre años es significativamente menor en escala normalizada, lo que indica que las **diferencias entre años se deben principalmente a la magnitud total de precipitación**, no a cambios en el patrón temporal de distribución.
 
-- **Implicaciones para modelado**: Esta consistencia sugiere que:
-  - Un modelo estacional con componentes fijas puede capturar adecuadamente el patrón
-  - La variabilidad interanual afecta principalmente la amplitud, no la fase del ciclo estacional
-  - Los componentes estacionales del modelo SARIMA serán robustos y predecibles
-
 **Comparación con datos absolutos:**
 
 Mientras que el gráfico con valores absolutos muestra **cuánto llovió**, el gráfico normalizado muestra **cuándo llovió** en relación con el resto del año. Esta visualización confirma que el **calendario de lluvias es predecible**, aunque la intensidad varíe entre años.
@@ -267,7 +180,7 @@ Observando los 12 gráficos de rezago, se pueden identificar las siguientes cara
 
 ## Prueba de Estacionariedad
 
-La estacionariedad es un requisito fundamental para muchos modelos de pronóstico de series temporales (como ARIMA). Una serie es estacionaria cuando sus propiedades estadísticas (media, varianza) no cambian con el tiempo.
+La estacionariedad es un requisito fundamental para muchos modelos de pronóstico de series temporales. Una serie es estacionaria cuando sus propiedades estadísticas (media, varianza) no cambian con el tiempo.
 
 ### Test de Dickey-Fuller Aumentado (ADF)
 
@@ -306,27 +219,6 @@ La diferenciación es una transformación matemática que se aplica a series tem
 1. **Test ADF concluyente**: El test de Dickey-Fuller Aumentado rechaza la hipótesis nula de raíz unitaria (p-valor < 0.05), confirmando que la serie ya es estacionaria en su forma original.
 
 2. **Ausencia de tendencia**: La descomposición STL mostró que no existe una tendencia de largo plazo creciente o decreciente. El componente de tendencia fluctúa alrededor de un nivel constante.
-
-3. **Media constante**: El promedio móvil de 12 meses (MA(12)) confirmó que la serie oscila alrededor de un nivel estable (~8-10 mm mensuales) sin cambios sistemáticos.
-
-4. **Varianza estable**: La amplitud de las oscilaciones se mantiene relativamente constante a lo largo del período analizado, sin evidencia de heteroscedasticidad.
-
-**Consecuencias de diferenciar innecesariamente:**
-
-Si aplicáramos diferenciación a una serie que **ya es estacionaria**, incurriríamos en los siguientes problemas:
-
-- **Sobrediferenciación**: Introduciríamos autocorrelación negativa artificial en lag 1
-- **Pérdida de interpretabilidad**: Los coeficientes del modelo dejarían de representar relaciones directas con la precipitación
-- **Mayor error de pronóstico**: La varianza del error aumentaría innecesariamente
-- **Complejidad sin beneficio**: El modelo sería más difícil de ajustar y validar sin mejora en el desempeño
-
-**Implicación para el modelado:**
-
-Dado que la serie es estacionaria en su forma original, podemos proceder directamente con modelos de la familia ARMA o SARIMA con **d = 0** (sin diferenciación regular):
-
-- Modelos candidatos: ARMA(p,q) o SARIMA(p,0,q)(P,D,Q)[12]
-- La componente estacional bimodal puede manejarse con la parte estacional del SARIMA
-- Los coeficientes del modelo se interpretarán directamente sobre los valores de precipitación en milímetros
 
 ### Análisis ACF y PACF de la Serie Original
 
