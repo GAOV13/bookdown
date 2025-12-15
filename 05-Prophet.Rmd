@@ -1,0 +1,328 @@
+# Enfoque de Regresión: Facebook Prophet {#prophet}
+
+Facebook Prophet representa un enfoque alternativo para el pronóstico de series temporales, basándose en modelos aditivos generalizados (GAM) en lugar de procesos estocásticos. Este paradigma permite interpretar las series temporales desde una perspectiva de **regresión**, donde los componentes (tendencia, estacionalidad, eventos) se modelan como variables predictoras independientes.
+
+**Nota**: Los datos y el modelo Prophet fueron preparados en el Capítulo \@ref(preparacion). Los objetos `prophet_model`, `prophet_forecast`, `prophet_insample`, `prophet_train` y `prophet_test_df` están disponibles directamente.
+
+## Series Temporales como Regresión
+
+### Paradigma Tradicional vs. Enfoque Regresivo
+
+**Modelos estocásticos (ARIMA, Holt-Winters):**
+- Asumen que cada observación depende de observaciones pasadas
+- Modelan la autocorrelación como propiedad fundamental
+- Requieren datos consecutivos sin valores faltantes
+- Dificultan la incorporación de variables externas
+
+**Enfoque de regresión (Prophet):**
+- Descompone la serie en componentes interpretables
+- Cada componente se modela como función del tiempo
+- Permite datos irregulares y valores faltantes
+- Facilita la inclusión de variables exógenas (regresores)
+
+
+## Resumen del Modelo Ajustado
+
+```{r resumen-prophet}
+cat("=== MODELO PROPHET ===\n\n")
+cat("Partición de datos:\n")
+cat("  Entrenamiento:", format(min(prophet_train$ds), "%Y-%m"), "a", 
+    format(max(prophet_train$ds), "%Y-%m"), "| n =", nrow(prophet_train), "\n")
+cat("  Prueba:", format(min(prophet_test_df$ds), "%Y-%m"), "a", 
+    format(max(prophet_test_df$ds), "%Y-%m"), "| n =", nrow(prophet_test_df), "\n\n")
+
+cat("Configuración del modelo:\n")
+cat("  Modo de estacionalidad:", prophet_model$seasonality.mode, "\n")
+cat("  Estacionalidad anual: Activada (Fourier)\n")
+cat("  Changepoint prior scale:", prophet_model$changepoint.prior.scale, "\n")
+cat("  Seasonality prior scale:", prophet_model$seasonality.prior.scale, "\n")
+cat("  Changepoints detectados:", length(prophet_model$changepoints), "\n\n")
+
+cat("Métricas de pronóstico (1998):\n")
+cat("  MAE:", round(MAE_prophet, 3), "mm\n")
+cat("  RMSE:", round(RMSE_prophet, 3), "mm\n")
+cat("  MAPE:", round(MAPE_prophet, 2), "%\n")
+cat("  Cobertura IC:", round(cobertura_prophet, 1), "%\n")
+```
+
+
+## Extracción y Visualización de Componentes
+
+```{r componentes-prophet, fig.width=12, fig.height=10}
+# Visualización automática de componentes
+prophet_plot_components(prophet_model, prophet_insample)
+```
+
+```{r analisis-componentes, fig.width=12, fig.height=8}
+# Extraer componentes para análisis detallado
+componentes_prophet <- prophet_insample %>%
+  select(ds, trend, yearly, yhat) %>%
+  mutate(
+    Mes = month(ds),
+    Anio = year(ds)
+  )
+
+# Patrón estacional promedio
+patron_estacional <- componentes_prophet %>%
+  group_by(Mes) %>%
+  summarize(Efecto_Estacional = mean(yearly, na.rm = TRUE))
+
+# Gráfico del patrón estacional
+ggplot(patron_estacional, aes(x = Mes, y = Efecto_Estacional)) +
+  geom_col(fill = "lightgreen", alpha = 0.7) +
+  geom_line(aes(group = 1), color = "darkgreen", linewidth = 1) +
+  geom_point(color = "darkgreen", size = 3) +
+  scale_x_continuous(breaks = 1:12, 
+                     labels = c("Ene", "Feb", "Mar", "Abr", "May", "Jun",
+                                "Jul", "Ago", "Sep", "Oct", "Nov", "Dic")) +
+  labs(
+    title = "Patrón Estacional Anual (Prophet)",
+    subtitle = "Efecto promedio de cada mes sobre la precipitación",
+    x = "Mes",
+    y = "Efecto Estacional (mm)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 14))
+
+cat("\n=== INTERPRETACIÓN DEL PATRÓN ESTACIONAL ===\n\n")
+cat("El patrón bimodal se confirma:\n")
+cat("  • Pico primario:", month.abb[which.max(patron_estacional$Efecto_Estacional)], "\n")
+cat("  • Efecto máximo:", round(max(patron_estacional$Efecto_Estacional), 2), "mm\n\n")
+
+meses_secos <- patron_estacional %>% filter(Efecto_Estacional < 0)
+cat("Meses con efecto negativo (temporada seca):\n")
+print(meses_secos)
+```
+
+## Análisis Comparativo: Serie Original vs. Valores Ajustados
+
+```{r comparacion-original-fitted-prophet, fig.width=12, fig.height=8}
+# Preparar datos para comparación
+datos_comparacion_prophet <- data.frame(
+  Fecha = prophet_train$ds,
+  Original = prophet_train$y,
+  Ajustado = prophet_insample$yhat
+)
+
+# Gráfico de comparación
+ggplot(datos_comparacion_prophet, aes(x = Fecha)) +
+  geom_line(aes(y = Original, color = "Serie Original"), 
+            linewidth = 0.8, alpha = 0.6) +
+  geom_line(aes(y = Ajustado, color = "Prophet Ajustado"), 
+            linewidth = 1.0) +
+  scale_color_manual(
+    values = c("Serie Original" = "black", "Prophet Ajustado" = "green")
+  ) +
+  labs(
+    title = "Comparación: Serie Original vs. Valores Ajustados por Prophet",
+    subtitle = sprintf("Modelo aditivo con estacionalidad de Fourier | %d changepoints detectados",
+                      length(prophet_model$changepoints)),
+    x = "Fecha",
+    y = "Precipitación (mm)",
+    color = ""
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "bottom"
+  )
+
+# Métricas de calidad del ajuste
+correlacion_prophet <- cor(datos_comparacion_prophet$Original, 
+                           datos_comparacion_prophet$Ajustado)
+r2_prophet <- correlacion_prophet^2
+mse_insample_prophet <- mean((datos_comparacion_prophet$Original - 
+                               datos_comparacion_prophet$Ajustado)^2)
+rmse_insample_prophet <- sqrt(mse_insample_prophet)
+
+cat("\n=== CALIDAD DEL AJUSTE (IN-SAMPLE) ===\n\n")
+cat("Correlación (r):", round(correlacion_prophet, 4), "\n")
+cat("R² (coef. determinación):", round(r2_prophet, 4), "\n")
+cat("  → El modelo explica el", round(r2_prophet * 100, 2), "% de la varianza\n\n")
+cat("MSE (Error Cuadrático Medio):", round(mse_insample_prophet, 3), "mm²\n")
+cat("RMSE (Raíz del MSE):", round(rmse_insample_prophet, 3), "mm\n\n")
+
+cat("Interpretación:\n")
+cat("  • Las discrepancias entre valores originales y ajustados representan\n")
+cat("    el componente irregular (residuos) que Prophet no captura.\n")
+cat("  • Un buen ajuste implica que estos residuos sean ruido blanco.\n")
+cat("  • Prophet descompone la serie en tendencia + estacionalidad + residuos,\n")
+cat("    siguiendo el paradigma de regresión GAM.\n")
+```
+
+## Pronóstico para 1998
+
+```{r pronostico-prophet, fig.width=12, fig.height=8}
+# Crear dataframe futuro para pronóstico
+future_dates <- data.frame(ds = prophet_test$ds)
+
+# Generar pronóstico
+forecast_prophet <- predict(prophet_model, future_dates)
+
+# Extraer componentes relevantes para el período de prueba
+datos_forecast_prophet <- data.frame(
+  Fecha = prophet_test$ds,
+  Observado = prophet_test$y,
+  Pronostico = forecast_prophet$yhat,
+  IC_inferior = forecast_prophet$yhat_lower,
+  IC_superior = forecast_prophet$yhat_upper
+)
+
+# Gráfico de pronóstico vs observado
+ggplot(datos_forecast_prophet, aes(x = Fecha)) +
+  # Intervalo de confianza
+  geom_ribbon(aes(ymin = IC_inferior, ymax = IC_superior),
+              fill = "green", alpha = 0.1) +
+  # Línea de pronóstico
+  geom_line(aes(y = Pronostico, color = "Pronóstico Prophet"),
+            linewidth = 1.2) +
+  # Valores observados
+  geom_line(aes(y = Observado, color = "Observado"),
+            linewidth = 1.0) +
+  geom_point(aes(y = Observado, color = "Observado"),
+             size = 2.5) +
+  scale_color_manual(
+    values = c("Pronóstico Prophet" = "green", "Observado" = "black")
+  ) +
+  labs(
+    title = "Pronóstico Prophet vs. Valores Observados (1998)",
+    subtitle = "Modelo aditivo con estacionalidad de Fourier | IC 95%",
+    x = "Fecha",
+    y = "Precipitación (mm)",
+    color = ""
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "bottom"
+  )
+```
+
+## Evaluación del Desempeño
+
+```{r metricas-prophet}
+# Calcular errores de pronóstico
+errores_prophet <- datos_forecast_prophet$Observado - datos_forecast_prophet$Pronostico
+
+# Métricas de precisión
+MAE_prophet <- mean(abs(errores_prophet))
+RMSE_prophet <- sqrt(mean(errores_prophet^2))
+MAPE_prophet <- mean(abs(errores_prophet / pmax(datos_forecast_prophet$Observado, 0.1))) * 100
+
+cat("=== MÉTRICAS DE DESEMPEÑO DEL PRONÓSTICO PROPHET ===\n\n")
+cat("Error Absoluto Medio (MAE):", round(MAE_prophet, 3), "mm\n")
+cat("Raíz del Error Cuadrático Medio (RMSE):", round(RMSE_prophet, 3), "mm\n")
+cat("Error Porcentual Absoluto Medio (MAPE):", round(MAPE_prophet, 2), "%\n\n")
+
+# Análisis de cobertura del intervalo
+dentro_IC_prophet <- sum(datos_forecast_prophet$Observado >= datos_forecast_prophet$IC_inferior & 
+                          datos_forecast_prophet$Observado <= datos_forecast_prophet$IC_superior)
+cobertura_prophet <- (dentro_IC_prophet / nrow(datos_forecast_prophet)) * 100
+
+cat("Cobertura del intervalo de confianza (95%):", round(cobertura_prophet, 1), "%\n")
+cat("  Observaciones dentro del IC:", dentro_IC_prophet, "de", nrow(datos_forecast_prophet), "\n\n")
+
+# Test de normalidad de errores
+shapiro_errores_prophet <- shapiro.test(errores_prophet)
+
+cat("Test de Shapiro-Wilk (normalidad de errores):\n")
+cat("  Estadístico W:", round(shapiro_errores_prophet$statistic, 4), "\n")
+cat("  P-valor:", round(shapiro_errores_prophet$p.value, 4), "\n")
+
+if(shapiro_errores_prophet$p.value > 0.05) {
+  cat("  Conclusión: Los errores siguen distribución normal (p > 0.05)\n")
+} else {
+  cat("  Conclusión: Los errores NO siguen distribución normal (p < 0.05)\n")
+}
+
+cat("\n=== ESTADÍSTICAS DE ERRORES ===\n\n")
+cat("Media de errores:", round(mean(errores_prophet), 4), "mm\n")
+cat("  (Sesgo: valor cercano a 0 indica predicciones no sesgadas)\n\n")
+cat("Desviación estándar:", round(sd(errores_prophet), 3), "mm\n")
+cat("Error mínimo:", round(min(errores_prophet), 3), "mm\n")
+cat("Error máximo:", round(max(errores_prophet), 3), "mm\n")
+```
+
+## Diagnóstico de Residuos
+
+```{r diagnostico-residuos-prophet, fig.width=12, fig.height=8}
+# Residuos in-sample
+residuos_prophet <- prophet_train$y - prophet_insample$yhat
+
+par(mfrow = c(2, 2))
+
+# 1. Serie temporal de residuos
+plot(prophet_train$ds, residuos_prophet, type = "l",
+     main = "Residuos Prophet a lo Largo del Tiempo",
+     xlab = "Fecha", ylab = "Residuo (mm)", col = "green")
+abline(h = 0, col = "red", lty = 2, lwd = 2)
+abline(h = c(-2, 2) * sd(residuos_prophet, na.rm = TRUE), col = "gray", lty = 3)
+grid()
+
+# 2. Histograma
+hist(residuos_prophet, breaks = 20, col = "lightgreen", border = "green",
+     main = "Distribución de Residuos",
+     xlab = "Residuo (mm)", ylab = "Frecuencia", probability = TRUE)
+curve(dnorm(x, mean = mean(residuos_prophet, na.rm = TRUE), 
+            sd = sd(residuos_prophet, na.rm = TRUE)),
+      add = TRUE, col = "red", lwd = 2)
+
+# 3. Q-Q plot
+qqnorm(residuos_prophet, main = "Q-Q Plot de Residuos Prophet",
+       pch = 19, col = "green")
+qqline(residuos_prophet, col = "red", lwd = 2)
+
+# 4. ACF de residuos
+acf(residuos_prophet, main = "ACF de Residuos", col = "green", lwd = 2, na.action = na.pass)
+
+par(mfrow = c(1, 1))
+
+cat("\n=== ESTADÍSTICAS DE RESIDUOS ===\n\n")
+cat("Media:", round(mean(residuos_prophet, na.rm = TRUE), 4), "mm\n")
+cat("Desviación estándar:", round(sd(residuos_prophet, na.rm = TRUE), 3), "mm\n")
+cat("Mínimo:", round(min(residuos_prophet, na.rm = TRUE), 3), "mm\n")
+cat("Máximo:", round(max(residuos_prophet, na.rm = TRUE), 3), "mm\n")
+
+# Test de normalidad
+shapiro_residuos_prophet <- shapiro.test(residuos_prophet)
+cat("\nTest de Shapiro-Wilk:\n")
+cat("  P-valor:", round(shapiro_residuos_prophet$p.value, 4), "\n")
+if(shapiro_residuos_prophet$p.value > 0.05) {
+  cat("  Conclusión: Residuos normales (p > 0.05)\n")
+} else {
+  cat("  Conclusión: Residuos NO normales (p < 0.05)\n")
+}
+```
+
+## Diagnóstico de Errores de Pronóstico
+
+```{r diagnostico-errores-prophet, fig.width=12, fig.height=8}
+par(mfrow = c(2, 2))
+
+# 1. Serie temporal de errores
+plot(datos_forecast_prophet$Fecha, errores_prophet, type = "b",
+     main = "Errores de Pronóstico a lo Largo del Tiempo",
+     xlab = "Fecha", ylab = "Error (mm)", col = "green", pch = 19)
+abline(h = 0, col = "gray40", lty = 2, lwd = 2)
+grid()
+
+# 2. Histograma
+hist(errores_prophet, breaks = 8, col = "lightgreen", border = "green",
+     main = "Distribución de Errores de Pronóstico",
+     xlab = "Error (mm)", ylab = "Frecuencia")
+abline(v = 0, col = "red", lty = 2, lwd = 2)
+abline(v = mean(errores_prophet), col = "blue", lty = 2, lwd = 2)
+legend("topright", legend = c("Cero", "Media"),
+       col = c("red", "blue"), lty = 2, lwd = 2)
+
+# 3. Q-Q plot
+qqnorm(errores_prophet, main = "Q-Q Plot de Errores de Pronóstico",
+       pch = 19, col = "green")
+qqline(errores_prophet, col = "red", lwd = 2)
+
+# 4. ACF de errores
+acf(errores_prophet, main = "ACF de Errores de Pronóstico",
+    col = "green", lwd = 2)
+
+par(mfrow = c(1, 1))
+```
