@@ -7,7 +7,6 @@ apoyo-a-la-planificación-territorial-y-ambiental
 fortalecimiento-de-la-gestión-del-recurso-hídrico-y-la-sostenibilidad
 valor-agregado-del-pronóstico-para-la-gestión-del-riesgo
 propuesta-de-información-a-trabajar-pronóstico-de-variables-hidrometeorológicas-para-la-gestión-del-riesgo-en-el-valle-del-cauca
-referencias
 preparacion
 carga-de-librerías
 lectura-y-limpieza-de-datos
@@ -54,9 +53,9 @@ paradigma-tradicional-vs.-enfoque-regresivo
 resumen-del-modelo-ajustado-2
 extracción-y-visualización-de-componentes
 análisis-comparativo-serie-original-vs.-valores-ajustados-1
+diagnóstico-de-residuos-1
 pronóstico-para-1998-1
 evaluación-del-desempeño
-diagnóstico-de-residuos-1
 diagnóstico-de-errores-de-pronóstico-1
 comparacion
 introducción-tres-paradigmas
