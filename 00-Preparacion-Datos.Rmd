@@ -2,9 +2,9 @@
 
 Este capítulo ejecuta toda la preparación de datos, limpieza, creación de series temporales y ajuste de modelos. Los objetos generados aquí se utilizan en los capítulos posteriores para visualizaciones y análisis, evitando duplicación de código.
 
-```{r setup-global, include=FALSE}
+```{r setup-preparacion, include=FALSE}
 knitr::opts_chunk$set(
-  echo = TRUE,
+  echo = FALSE,
   message = FALSE,
   warning = FALSE,
   cache = TRUE,
